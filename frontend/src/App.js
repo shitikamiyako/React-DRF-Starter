@@ -1,25 +1,29 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { Component } from "react";
+import axios from "axios";
+import { BrowserRouter } from "react-router-dom";
+import { Container, Box } from "@material-ui/core";
+import ScopedCssBaseline from "@material-ui/core/ScopedCssBaseline";
+// import './App.css';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+// 全体のレイアウトを決める、とりあえず再利用は考えない
+export default class App extends Component {
+  render() {
+    return (
+      // CSSリセットのためのコンポーネント
+      <ScopedCssBaseline>
+        <BrowserRouter>
+          {/* Box = div */}
+          <Box className="app">
+            <header></header>
+            {/* コンテンツが入る部分 */}
+            <MainContent />
+            <footer></footer>
+          </Box>
+        </BrowserRouter>
+      </ScopedCssBaseline>
+    );
+  }
 }
 
-export default App;
+// Material_uiはHookの形式でcssスタイルを定義できるのでそれを利用して再利用前提でコンポーネントを作ることができる
+// 次はフォームを作るのでそれで練習する

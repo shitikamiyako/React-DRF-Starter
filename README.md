@@ -667,10 +667,26 @@ Reactはコンポーネントの外に出たり、リロードなどの再描画
 なので、もしこれからReactにチャレンジするという方はぜひReact Hooksを少し頑張ってみてほしいです。
 それで足りなければReduxを勉強するタイミング……ということなのでしょう。
 
-### 3 React Hooksを使って実際にページを作ってみる
+## 3 React Hooksを使って実際にページを作ってみる
 
 ではここから実際にReact Hooksを使ってページを作ってみます。
-Reduxを使わなくてもまあまあ大丈夫そうだなというのをこの工程で感じられると思います。
+Reduxを使わなくてもまあまあ大丈夫そうだなというのをこの工程でとりあえず感じていただければと思います。
+
+Reactでページを使うのに必要そうなライブラリは大まかに以下の通りだと思います。
+
+- React(React Hooks)
+- Redux(使うなら。Redux toolkitでやるのがおすすめです)
+- React Hook Form(Reactでフォームを作るならこれで作りましょう)
+- axios(HTTPリクエストを非同期でやるやつ)
+- react-router(ルーティングやページ遷移で使う)
+- react-router-dom(上に同じ)
+- react-router-bootstrap(ヘッダーで使う。SPAでのページ遷移のため)
+
+これらの他にあとはデザインをBootstrap(react-bootstrap)かMaterial-uiにするかという感じです。
+では実際に作っていきます。
+
+
+### 3.1 React Hooksを使う
 
 
 Djangoプロジェクト立ち上げ(configフォルダ)
