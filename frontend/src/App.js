@@ -3,7 +3,7 @@ import axios from "axios";
 import { BrowserRouter } from "react-router-dom";
 import { Container, Box } from "@material-ui/core";
 import ScopedCssBaseline from "@material-ui/core/ScopedCssBaseline";
-// import './App.css';
+import Test from "./BookComponents/SearchBookContainer"
 
 // 全体のレイアウトを決める、とりあえず再利用は考えない
 export default class App extends Component {
@@ -16,7 +16,8 @@ export default class App extends Component {
           <Box className="app">
             <header></header>
             {/* コンテンツが入る部分 */}
-            <MainContent />
+            <Test />
+            {/* <MainContent /> */}
             <footer></footer>
           </Box>
         </BrowserRouter>
