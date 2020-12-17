@@ -2,7 +2,6 @@
 import React from "react";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import _ from "lodash";
 
 import { Grid } from "@material-ui/core";
 
@@ -28,10 +27,9 @@ const SearchBookContainer = () => {
     console.log(params);
     try {
       const response = await axios.get(baseUrl, { params: params });
-      // const responseMap = response.data.map((obj) => {
-      //     return obj;
-      // })
       console.log(response.data.items);
+      console.log(response.data);
+      console.log(response);
       setBooks(response.data);
       console.log(books);
     } catch (error) {
@@ -39,9 +37,6 @@ const SearchBookContainer = () => {
     }
   };
 
-  let BookList = books;
-  console.log(books);
-  // let BookList = Object.values(bookList);
 
   // useEffectを書く
 
@@ -74,7 +69,5 @@ const SearchBookContainer = () => {
     </React.Fragment>
   );
 };
-
-// }
 
 export default SearchBookContainer;

@@ -1,15 +1,10 @@
 import React from "react";
-import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { ErrorMessage } from "@hookform/error-message";
 import { TextField, Button, Grid, Box } from "@material-ui/core";
 
 const SearchBookForm = ({ onSubmit }) => {
   const { control, handleSubmit, errors } = useForm();
-  const [searchWord, setSearchWord] = useState();
-  const handleChange = (e) => {
-    setSearchWord(e.target.value);
-  };
 
   return (
     <React.Fragment>
@@ -31,7 +26,6 @@ const SearchBookForm = ({ onSubmit }) => {
               },
             }}
             defaultValue=""
-            onChange={handleChange}
           />
           <div>
             <ErrorMessage errors={errors} name="multipleErrorInput">

@@ -688,6 +688,448 @@ Reactでページを使うのに必要そうなライブラリは大まかに以
 
 ### 3.1 React Hooksを使う
 
+まずはデザイン等は考えずにとりあえずやりたい動きができる最低限のものということで以下のようなものを作ってみたいと思います。
+
+ご覧の通りタイトルを入れるとそのタイトルのコミックを一覧表示するというものになります。
+
+`GoogleBookAPI`と`ReactHookForm`を使うと簡単に作れます。
+まず構成を考えてみます。
+とりあえず以下のような構成にしてみます。
+
+
+```cmd
+
+frontend/
+　├ src/
+　├ index.js/
+　├ App.js/
+　├ BookComponents/
+　│　└ SearchBookContainer.js/
+　│　└ SearchBookForm.js/
+　│　└ SearchBookLayout.js/
+
+```
+
+`index.js`に`App.js`をimportして`App.js`には`SearchBookContainer.js`をimportする形で描画してみます。
+
+コードは以下の通りです。
+
+```jsx:SearchBookLayout.js
+
+// ページ全体のレイアウト部分
+
+import React from "react";
+import { Container } from "@material-ui/core";
+
+const SearchBookLayout = (props) => {
+    return (
+        <Container>{props.children}</Container>
+    )
+
+}
+
+export default SearchBookLayout;
+
+
+```
+
+```jsx:SearchBookContainer.js
+
+
+// 統括部分。Formの実行結果のレンダリング部分とフォームの処理部分をここに定義
+
+import React from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import _ from "lodash";
+
+import { Grid } from "@material-ui/core";
+
+import SearchBookForm from "./SearchBookForm";
+import SearchBookLayout from "./SearchBookLayout";
+import { GBAParams } from "../Utils/GoogleBooksAPIs";
+
+const SearchBookContainer = () => {
+  const [books, setBooks] = useState({ items: [] });
+
+  const baseUrl = GBAParams.ROOT_URL;
+  console.log(baseUrl);
+
+  const searchTitle = async (data) => {
+    const params = {
+      // 完全一致で探したい
+      q: `${GBAParams.QUERY_TITLE}"${data.title}"`,
+      Country: "JP",
+      maxResults: 40,
+      startIndex: 0,
+      printType: "books",
+    };
+    console.log(params);
+    try {
+      const response = await axios.get(baseUrl, { params: params });
+      console.log(response.data.items);
+      setBooks(response.data);
+      console.log(books);
+    } catch (error) {
+      console.log(error.response);
+    }
+  };
+
+
+  // useEffectを書く
+
+  useEffect(() => {
+    setBooks(books);
+  }, [books]);
+
+  return (
+    <React.Fragment>
+      <SearchBookLayout>
+        <Grid container direction="row" justify="center">
+          <SearchBookForm onSubmit={searchTitle} />
+        </Grid>
+        {/* ここに検索結果を一覧表示させる */}
+        <Grid container direction="row" justify="center" alignItems="center">
+          <Grid container item xs={12} spacing={3}>
+            {books.items.map((book, index) => (
+              <Grid item xs={12} md={4} key={index}>
+                <img
+                  alt={`${book.volumeInfo.title} book`}
+                  src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
+                />
+                <h3>{book.volumeInfo.title}</h3>
+                <p>{book.volumeInfo.publishedDate}</p>
+              </Grid>
+            ))}
+          </Grid>
+        </Grid>
+      </SearchBookLayout>
+    </React.Fragment>
+  );
+};
+
+export default SearchBookContainer;
+
+```
+
+```jsx:SearchBookForm.js
+
+// フォーム部分です
+
+import React from "react";
+import { useForm, Controller } from "react-hook-form";
+import { ErrorMessage } from "@hookform/error-message";
+import { TextField, Button, Grid, Box } from "@material-ui/core";
+
+const SearchBookForm = ({ onSubmit }) => {
+  const { control, handleSubmit, errors } = useForm();
+
+  return (
+    <React.Fragment>
+      { // フォームとリスト表示部分を統合させるので統合部分にonSubmitのメソッドを書き、引数で渡せるようにする }
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Grid item xs={12}>
+          <Controller
+            as={
+              <TextField
+                inputProps={{ min: 0, style: { textAlign: "center" } }}
+              />
+            }
+            name="title"
+            control={control}
+            rules={{
+              required: "書籍のタイトルを入力してください",
+              maxLength: {
+                value: 100,
+                message: "タイトルは100文字以内です",
+              },
+            }}
+            defaultValue=""
+            onChange={handleChange}
+          />
+          <div>
+            <ErrorMessage errors={errors} name="multipleErrorInput">
+              {({ messages }) =>
+                messages &&
+                Object.entries(messages).map(([type, message]) => (
+                  <p key={type}>{message}</p>
+                ))
+              }
+            </ErrorMessage>
+          </div>
+          <Box mt={1} textAlign="center">
+            <Controller
+              as={
+                <Button variant="outlined" color="primary">
+                  Search
+                </Button>
+              }
+              name="submit"
+              control={control}
+              defaultValue=""
+              onClick={handleSubmit(onSubmit)}
+            />
+          </Box>
+        </Grid>
+      </form>
+    </React.Fragment>
+  );
+};
+
+export default SearchBookForm;
+
+```
+
+`React.Fragment`は`div`の代わりのようなものだと思ってください。
+より正確にはReactでこのようにHTML要素(JSX)をreturnする場合、要素を1つにする必要があるのですがB以上のように複数の要素を返したい場合が殆どだと思います。
+そのため1つの親要素で返したい要素をラップするのが解決策になりますが、このとき`div`で括ると不要なタグとなってしまうことがあります。
+それを解決するのが`React.Fragment`になります。
+`React.Fragment`はHTMLタグとして出力されないので、Reactに`React.Fragment`から下の要素を描画してくださいと教えて上げるようなイメージだと思っています。
+
+`React Hook`について見ていきます。
+今回直接的に使用しているのは`SearchBookContainer`の部分になります。
+では改めてコードを見てみます。
+
+<details><summary>SearchBookContainer</summary><div>
+
+
+```jsx
+
+// 統括部分。Formの実行結果のレンダリング部分とフォームの処理部分をここに定義
+import React from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import _ from "lodash";
+
+import { Grid } from "@material-ui/core";
+
+import SearchBookForm from "./SearchBookForm";
+import SearchBookLayout from "./SearchBookLayout";
+import { GBAParams } from "../Utils/GoogleBooksAPIs";
+
+const SearchBookContainer = () => {
+  const [books, setBooks] = useState({ items: [] });
+
+  const baseUrl = GBAParams.ROOT_URL;
+  console.log(baseUrl);
+
+  const searchTitle = async (data) => {
+    const params = {
+      // 完全一致で探したい
+      q: `${GBAParams.QUERY_TITLE}"${data.title}"`,
+      Country: "JP",
+      maxResults: 40,
+      startIndex: 0,
+      printType: "books",
+    };
+    console.log(params);
+    try {
+      const response = await axios.get(baseUrl, { params: params });
+      console.log(response.data.items);
+      setBooks(response.data);
+      console.log(books);
+    } catch (error) {
+      console.log(error.response);
+    }
+  };
+
+  let BookList = books;
+  console.log(books);
+
+  // useEffectを書く
+
+  useEffect(() => {
+    setBooks(books);
+  }, [books]);
+
+  return (
+    <React.Fragment>
+      <SearchBookLayout>
+        <Grid container direction="row" justify="center">
+          <SearchBookForm onSubmit={searchTitle} />
+        </Grid>
+        {/* ここに検索結果を一覧表示させる */}
+        <Grid container direction="row" justify="center" alignItems="center">
+          <Grid container item xs={12} spacing={3}>
+            {books.items.map((book, index) => (
+              <Grid item xs={12} md={4} key={index}>
+                <img
+                  alt={`${book.volumeInfo.title} book`}
+                  src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
+                />
+                <h3>{book.volumeInfo.title}</h3>
+                <p>{book.volumeInfo.publishedDate}</p>
+              </Grid>
+            ))}
+          </Grid>
+        </Grid>
+      </SearchBookLayout>
+    </React.Fragment>
+  );
+};
+
+export default SearchBookContainer;
+
+```
+
+</div></details>
+
+やることは**APIを叩いて得られたデータを配列で格納して、描画する時にmap()でさらに配列にし直して取り出すことで描画する**ということになります。
+ここで肝なのは`useState`の初期値をしっかり空配列にするということです。
+これをやらないと`Cannot read property 'map' of undefined`エラーになります。
+というのもReactは[このようなライフサイクル図](https://projects.wojtekmaj.pl/react-lifecycle-methods-diagram/)で成り立っています。
+私もまだまだ勉強中なので敢えて語弊があるのを承知の上でざっくりいうと
+
+1. PropsとStateの初期値をセット
+2. PropsやStateの変更に応じてset­State()などを行い、初期値を更新する
+3. レンダリングする
+4. レンダリングした後に実行したい処理を実行する(useEffectやcomponentDidMountなど)
+
+という工程を踏むことになります。
+で、ここまで書けばわかると思いますが
+
+```jsx
+
+<Grid container item xs={12} spacing={3}>
+            {books.items.map((book, index) => (
+              <Grid item xs={12} md={4} key={index}>
+                <img
+                  alt={`${book.volumeInfo.title} book`}
+                  src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
+                />
+                <h3>{book.volumeInfo.title}</h3>
+                <p>{book.volumeInfo.publishedDate}</p>
+              </Grid>
+            ))}
+          </Grid>
+
+
+```
+
+レンダリング部分でこのように`map()`で配列を取り出すような形で要素を描画させたい時、例えば今回だと検索結果の一覧を各書籍ごとにタイトルと出版日、表紙画像で表示させたい……といった場合にこういう処理をすることになると思いますが当然`map()`を使うということは対象は配列になっていなければエラーになってしまうわけです。
+上述のエラーはそういうことになります。
+なので、初期値に空の配列を与えてあげるわけですね。
+
+API側から返ってくるデータについて見てみましょう。
+APIから返ってくるデータはJSONです。
+例えば`GoogleBooksAPI`であるならば
+
+```json
+
+{
+ "kind": "books#volumes",
+ "items": [
+  {
+   "kind": "books#volume",
+   "id": "_ojXNuzgHRcC",
+   "etag": "OTD2tB19qn4",
+   "selfLink": "https://www.googleapis.com/books/v1/volumes/_ojXNuzgHRcC",
+   "volumeInfo": {
+    "title": "Flowers",
+    "authors": [
+     "Vijaya Khisty Bodach"
+    ],
+   ...
+  },
+
+
+```
+
+というように返ってきます。
+もう少し具体的に見てみると
+
+<details><summary></summary><div>
+
+```json
+
+// const response = await axios.get(baseUrl, { params: params }); でconsole.log(response)した結果
+
+
+{data: {…}, status: 200, statusText: "", headers: {…}, config: {…}, …}
+config: {url: "https://www.googleapis.com/books/v1/volumes", method: "get", headers: {…}, params: {…}, transformRequest: Array(1), …}
+data: {kind: "books#volumes", totalItems: 17, items: Array(17)}
+headers: {vary: "Origin, X-Origin, Referer", date: "Thu, 17 Dec 2020 18:01:27 GMT", content-encoding: "gzip", server: "ESF", content-type: "application/json; charset=UTF-8", …}
+request: XMLHttpRequest {onreadystatechange: ƒ, readyState: 4, timeout: 0, withCredentials: false, upload: XMLHttpRequestUpload, …}
+status: 200
+statusText: ""
+__proto__: Object
+
+
+
+```
+
+```json
+
+// const response = await axios.get(baseUrl, { params: params }); でconsole.log(response.data)した結果
+
+
+{kind: "books#volumes", totalItems: 17, items: Array(17)}
+items: (17) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+kind: "books#volumes"
+totalItems: 17
+__proto__: Object
+
+```
+
+```json
+
+// const response = await axios.get(baseUrl, { params: params }); でconsole.log(response.data.items)した結果
+
+
+(17) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+0: {kind: "books#volume", id: "ETGeDwAAQBAJ", etag: "6eUZeFBv+3o", selfLink: "https://www.googleapis.com/books/v1/volumes/ETGeDwAAQBAJ", volumeInfo: {…}, …}
+1: {kind: "books#volume", id: "xYLgDwAAQBAJ", etag: "KPLayNzsnQw", selfLink: "https://www.googleapis.com/books/v1/volumes/xYLgDwAAQBAJ", volumeInfo: {…}, …}
+2: {kind: "books#volume", id: "Hc4LEAAAQBAJ", etag: "l07gnOm8/DI", selfLink: "https://www.googleapis.com/books/v1/volumes/Hc4LEAAAQBAJ", volumeInfo: {…}, …}
+3: {kind: "books#volume", id: "lCXwDwAAQBAJ", etag: "T6YFBCSSuFQ", selfLink: "https://www.googleapis.com/books/v1/volumes/lCXwDwAAQBAJ", volumeInfo: {…}, …}
+4: {kind: "books#volume", id: "OTf8DwAAQBAJ", etag: "6UhmxmxFrTk", selfLink: "https://www.googleapis.com/books/v1/volumes/OTf8DwAAQBAJ", volumeInfo: {…}, …}
+5: {kind: "books#volume", id: "uCyrDwAAQBAJ", etag: "5vMeoeZHK1g", selfLink: "https://www.googleapis.com/books/v1/volumes/uCyrDwAAQBAJ", volumeInfo: {…}, …}
+6: {kind: "books#volume", id: "NyOEDwAAQBAJ", etag: "aiQHmCoin0E", selfLink: "https://www.googleapis.com/books/v1/volumes/NyOEDwAAQBAJ", volumeInfo: {…}, …}
+7: {kind: "books#volume", id: "fA6ODwAAQBAJ", etag: "kK2w/CkHhj4", selfLink: "https://www.googleapis.com/books/v1/volumes/fA6ODwAAQBAJ", volumeInfo: {…}, …}
+8: {kind: "books#volume", id: "QDrADwAAQBAJ", etag: "m4KCOyfn8kI", selfLink: "https://www.googleapis.com/books/v1/volumes/QDrADwAAQBAJ", volumeInfo: {…}, …}
+9: {kind: "books#volume", id: "khHeDwAAQBAJ", etag: "K/dSmk4TTCE", selfLink: "https://www.googleapis.com/books/v1/volumes/khHeDwAAQBAJ", volumeInfo: {…}, …}
+10: {kind: "books#volume", id: "LSPsDwAAQBAJ", etag: "G936zVdgdVc", selfLink: "https://www.googleapis.com/books/v1/volumes/LSPsDwAAQBAJ", volumeInfo: {…}, …}
+11: {kind: "books#volume", id: "KDTMDwAAQBAJ", etag: "t02P5WQORxs", selfLink: "https://www.googleapis.com/books/v1/volumes/KDTMDwAAQBAJ", volumeInfo: {…}, …}
+12: {kind: "books#volume", id: "zM4NEAAAQBAJ", etag: "qXCtJnzUnIE", selfLink: "https://www.googleapis.com/books/v1/volumes/zM4NEAAAQBAJ", volumeInfo: {…}, …}
+13: {kind: "books#volume", id: "-wb8DwAAQBAJ", etag: "cvZsAbf8YS8", selfLink: "https://www.googleapis.com/books/v1/volumes/-wb8DwAAQBAJ", volumeInfo: {…}, …}
+14: {kind: "books#volume", id: "1UauDwAAQBAJ", etag: "YAA9RPXZru4", selfLink: "https://www.googleapis.com/books/v1/volumes/1UauDwAAQBAJ", volumeInfo: {…}, …}
+15: {kind: "books#volume", id: "lkW9DwAAQBAJ", etag: "AXlERUMUEUU", selfLink: "https://www.googleapis.com/books/v1/volumes/lkW9DwAAQBAJ", volumeInfo: {…}, …}
+16: {kind: "books#volume", id: "NtENEAAAQBAJ", etag: "HL7v3IRidas", selfLink: "https://www.googleapis.com/books/v1/volumes/NtENEAAAQBAJ", volumeInfo: {…}, …}
+length: 17
+__proto__: Array(0)
+
+```
+
+</div></details>
+
+このようになります。
+今回は書籍の情報だけほしいのでそれが格納されてそうな`response.data.items`をuseStateに収めて使っていくというわけです。
+もちろん用途や使うAPIによっては適宜パースする作業が必要になったりします。
+あとは収めたこのデータについてですが、今回はidのプロパティは再配列する際に使えそうにないのでとりあえずインデックスをKeyに使ってリスト表示させるということなります。
+こういった処理はReactで何かしたいという時に頻出する処理だと思うので覚えておきましょう。
+私はポートフォリオを作ったときにこれに気づかず沼った上に珍妙な書き方をしています、反省するべきところですね。
+
+### 3.2 ReactHookFormをMaterial-UIで使うには
+
+まずはこのあたりを見てください。
+
+[公式ドキュメント](https://material-ui.com/getting-started/installation/)
+[React入門 ～Material UI編～](https://zenn.dev/h_yoshikawa0724/articles/2020-09-24-react-material-ui)
+
+ざっくりいうと**Material-UIが用意してくれているページを構成するパーツをimportして自分でスタイルなどをカスタマイズして組み合わせてページを作る**ということになります。
+とりあえずこの時点で覚えておくべきコンポーネントは
+
+- [Box](https://material-ui.com/components/box/)
+- [Container](https://material-ui.com/components/container/)
+- [Grid](https://material-ui.com/components/grid/)
+
+というレイアウトに関するコンポーネント3つと
+
+- [TextField](https://material-ui.com/components/text-fields/)
+- [Button](https://material-ui.com/components/buttons/)
+
+というフォームに使う2つのコンポーネントです。
+これだけで簡単なinputフォームとその結果の表示みたいなページを作ることができます。
+
 
 Djangoプロジェクト立ち上げ(configフォルダ)
 ↓
