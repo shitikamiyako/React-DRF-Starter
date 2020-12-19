@@ -1129,6 +1129,105 @@ __proto__: Array(0)
 
 というフォームに使う2つのコンポーネントです。
 これだけで簡単なinputフォームとその結果の表示みたいなページを作ることができます。
+詳しいことはドキュメントへ飛んでください、公式のドキュメントが正義です。
+
+閑話休題、ではざっくりまとめると
+
+- [Box](https://material-ui.com/components/box/)
+→ 所謂div、ラップしたコンポーネントにスタイルを適用したいときに使う。
+
+- [Container](https://material-ui.com/components/container/)
+→ BootstrapにおけるContainer。react-bootstrapでも同じコンポーネントがある。
+
+- [Grid](https://material-ui.com/components/grid/)
+→ これが難問。いわゆるグリッドデザインをするためのコンポーネントですが少しややこしいので自分なりに少しまとめてみます。
+
+例として以下のコードで見てみます。
+
+```jsx
+
+        <Grid container direction="row" justify="center">
+          {/* 自分で作ったコンポーネントです、inputの入力画面がここに来ると思ってください*/}
+          <SearchBookForm onSubmit={searchTitle} />
+        </Grid>
+        {/* ここに上のinputフォームでの検索結果を一覧表示させたい */}
+        <Grid container direction="row" justify="center" alignItems="center">
+          <Grid container item xs={12} spacing={3}>
+            {books.items.map((book, index) => (
+              <Grid item xs={12} md={4} key={index}>
+                <img
+                  alt={`${book.volumeInfo.title} book`}
+                  src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
+                />
+                <h3>{book.volumeInfo.title}</h3>
+                <p>{book.volumeInfo.publishedDate}</p>
+              </Grid>
+            ))}
+          </Grid>
+        </Grid>
+
+
+```
+
+まず、`<Grid container direction="row" justify="center">`の部分からです。
+GridコンポーネントはTopレベルにはcontainerの属性をつけるようです。
+これがないと`direction="row"やjustify="center"`などのスタイルを指定できません。(ここについてはドキュメントのInteractiveの部分を参照してください)
+次に`<Grid container item xs={12} spacing={3}>`と`<Grid item xs={12} md={4} key={index}>`になります。
+containerに当たるGridコンポーネントにラップされるGridコンポーネントにitem属性をつけます。
+これをつけないと`xs={12} spacing={3}`などのスタイルは指定できません。
+よって以上のコードでの結果は以下の画像の通りになります。
+
+ここに画像
+
+- [TextField](https://material-ui.com/components/text-fields/)
+→ 役割的にはinputタグ、デザインはモダンな感じのものが用意されている。
+
+さてこの部分については`ReactHookForm`との併用について少し腹落ちさせていきます。
+react-bootstrapではあまり気にならなかったのですが、Material-UIなどのコンポーネントを`ReactHookForm`で使う場合、`ReactHookForm`のControllerコンポーネントを使うことになります。
+as属性に使いたいコンポーネントを指定する形です。
+例は以下の通りです。
+
+```jsx
+
+          <Controller
+              {/* asでコンポーネントを指定、ついでにinputPropsで中央寄せの指定をしている */}
+            as={
+              <TextField
+                inputProps={{ min: 0, style: { textAlign: "center" } }}
+              />
+            }
+            {/* いわゆるname属性 */}
+            name="title"
+            {/* 入れておく */}
+            control={control}
+            {/* 独自のバリデーションルール */}
+            rules={{
+              required: "書籍のタイトルを入力してください",
+              maxLength: {
+                value: 100,
+                message: "タイトルは100文字以内です",
+              },
+            }}
+            defaultValue=""
+          />
+          <div>
+              {/* エラーメッセージの表示部分 */}
+            <ErrorMessage errors={errors} name="multipleErrorInput">
+              {({ messages }) =>
+                messages &&
+                Object.entries(messages).map(([type, message]) => (
+                  <p key={type}>{message}</p>
+                ))
+              }
+            </ErrorMessage>
+          </div>
+
+
+```
+
+`TextField`にはlabelやhelptextなどの属性が内包されているのでとりあえずこれだけで使うことができます。
+カスタマイズがしたい、あるいは`Inpus`コンポーネントで1から作りたいという方はドキュメントを参照してください。
+
 
 
 Djangoプロジェクト立ち上げ(configフォルダ)
