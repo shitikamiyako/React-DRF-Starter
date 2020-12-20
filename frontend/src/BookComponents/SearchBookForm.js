@@ -3,7 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import { ErrorMessage } from "@hookform/error-message";
 import { TextField, Button, Grid, Box } from "@material-ui/core";
 
-const SearchBookForm = ({ onSubmit }) => {
+const SearchBookForm = ({ onSubmit, onFilter }) => {
   const { control, handleSubmit, errors } = useForm();
 
   return (
@@ -37,19 +37,38 @@ const SearchBookForm = ({ onSubmit }) => {
               }
             </ErrorMessage>
           </div>
-          <Box mt={1} textAlign="center">
-            <Controller
-              as={
-                <Button variant="outlined" color="primary">
-                  Search
-                </Button>
-              }
-              name="submit"
-              control={control}
-              defaultValue=""
-              onClick={handleSubmit(onSubmit)}
-            />
-          </Box>
+        </Grid>
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <Box mt={1} textAlign="center">
+              <Controller
+                as={
+                  <Button variant="outlined" color="primary">
+                    探す
+                  </Button>
+                }
+                name="submit"
+                control={control}
+                defaultValue=""
+                onClick={handleSubmit(onSubmit)}
+              />
+            </Box>
+          </Grid>
+          <Grid item xs={6}>
+            <Box mt={1} textAlign="center">
+              <Controller
+                as={
+                  <Button variant="outlined" color="primary">
+                    刊行順
+                  </Button>
+                }
+                name="submit"
+                control={control}
+                defaultValue=""
+                onClick={handleSubmit(onFilter)}
+              />
+            </Box>
+          </Grid>
         </Grid>
       </form>
     </React.Fragment>
