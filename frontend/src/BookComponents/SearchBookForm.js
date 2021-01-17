@@ -59,7 +59,7 @@ const SearchBookForm = ({ onSubmit, onFilter }) => {
               <Controller
                 as={
                   <Button variant="outlined" color="primary">
-                    刊行順
+                    既刊
                   </Button>
                 }
                 name="submit"
