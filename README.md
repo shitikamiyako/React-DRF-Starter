@@ -693,6 +693,9 @@ Reactでページを使うのに必要そうなライブラリは大まかに以
 
 まずはデザイン等は考えずにとりあえずやりたい動きができる最低限のものということで以下のようなものを作ってみたいと思います。
 
+![Videotogif.gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/201d961c-0fa8-54b9-c697-8a5c2cee7389.gif)
+
+
 ご覧の通りタイトルを入れるとそのタイトルのコミックを一覧表示するというものになります。
 
 `GoogleBookAPI`と`ReactHookForm`を使うと簡単に作れます。
@@ -1180,7 +1183,8 @@ containerに当たるGridコンポーネントにラップされるGridコンポ
 これをつけないと`xs={12} spacing={3}`などのスタイルは指定できません。
 よって以上のコードでの結果は以下の画像の通りになります。
 
-ここに画像
+![2020-12-20_03h39_59.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/65af507f-e6d7-59f9-1843-327c6318dbec.png)
+
 
 - [TextField](https://material-ui.com/components/text-fields/)
 → 役割的にはinputタグ、デザインはモダンな感じのものが用意されている。
@@ -1230,6 +1234,288 @@ as属性に使いたいコンポーネントを指定する形です。
 
 `TextField`にはlabelやhelptextなどの属性が内包されているのでとりあえずこれだけで使うことができます。
 カスタマイズがしたい、あるいは`Inpus`コンポーネントで1から作りたいという方はドキュメントを参照してください。
+
+### 3.3 各コンポーネントの作成
+
+では各コンポーネントを作っていきます。
+まずは中心部分となるAPIを叩いて、結果を描画する役割があるコンポーネントを見ていきます。
+
+<details><summary>書いたコード</summary><div>
+
+```jsx
+
+// 統括部分。Formの実行結果のレンダリング部分とフォームの処理部分をここに定義
+import React from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { useForm } from "react-hook-form";
+
+import { Grid, Box } from "@material-ui/core";
+import IconButton from '@material-ui/core/IconButton';
+
+import SearchBookForm from "./SearchBookForm";
+import SearchBookLayout from "./SearchBookLayout";
+import { GBAParams } from "../Utils/GoogleBooksAPIs";
+
+
+const SearchBookContainer = () => {
+  const [books, setBooks] = useState([]);
+  const [defaultBooks, setDefaultBooks] = useState(false);
+  const [filterFlag, setFilterFlag] = useState(false);
+  const { control } = useForm();
+
+  const baseUrl = GBAParams.ROOT_URL;
+  console.log(baseUrl);
+
+// Point1
+  const searchTitle = async (data) => {
+    const params = {
+      // 完全一致で探したい
+      q: `${GBAParams.QUERY_TITLE}${data.title}`,
+      Country: "JP",
+      maxResults: 40,
+      orderBy: "newest",
+      printType: "books",
+    };
+    console.log(params);
+    try {
+      const response = await axios.get(baseUrl, { params: params });
+      console.log(response.data.items);
+      console.log(response.data);
+      console.log(response);
+      const filter_items = response.data.items
+      // 刊行順にソート
+      const filtered_items = filter_items.sort(function (a, b) {
+        if (a.volumeInfo.publishedDate < b.volumeInfo.publishedDate) {
+          return -1;
+        } else {
+          return 1;
+        }
+
+      });
+      // 最終的に描画する部分
+      setBooks(filtered_items)
+      setDefaultBooks(filtered_items);
+    } catch (error) {
+      console.log(error.response);
+    }
+  };
+  // Point2
+  const handleFilter = () => {
+    if (!filterFlag) {
+      // 期間限定試し読みなどを省く
+      const filter_items = books.filter(
+        (book) => book.volumeInfo.seriesInfo !== undefined
+      )
+      // 刊行順にソート
+      const filtered_items = filter_items.sort(function (a, b) {
+        if (a.volumeInfo.publishedDate < b.volumeInfo.publishedDate) {
+          return -1;
+        } else {
+          return 1;
+        }
+
+      });
+      console.log(filtered_items)
+      setBooks(filtered_items)
+      setFilterFlag(true)
+    } else if (filterFlag === true) {
+      setBooks(defaultBooks)
+      setFilterFlag(false)
+    }
+
+  }
+
+
+  // useEffectを書く
+
+  useEffect(() => {
+    setBooks(books);
+
+  }, [books]);
+
+
+  return (
+    // Point3
+    <React.Fragment>
+      <SearchBookLayout>
+        <Box mb={4}>
+          <Grid container direction="row" justify="center">
+            <SearchBookForm onSubmit={searchTitle} onFilter={handleFilter} />
+          </Grid>
+        </Box>
+        {/* ここに検索結果を一覧表示させる */}
+        <Grid container direction="row" justify="center" alignItems="center">
+          <Grid container item  xs={12} spacing={1}>
+            {books.map((book, index) => (
+              <Grid item xs={6} md={4} align="center" key={index}>
+                    <img
+                      alt={`${book.volumeInfo.title} book`}
+                      src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
+                    />
+                <h3>{book.volumeInfo.title}</h3>
+                <p>{book.volumeInfo.authors[0]}</p>
+                <p>{book.volumeInfo.authors[1]}</p>
+                <p>発売日：{book.volumeInfo.publishedDate}</p>
+                <p><a href={book.volumeInfo.infoLink}>購入ページへ</a></p>
+                <p><a href={book.volumeInfo.previewLink}>試し読み</a></p>
+                {/* いいねボタン、バックエンドと非同期しないと使えないのでダミーでおいておく */}
+                <IconButton onClick={()=> console.log}>
+                  {/* {like ? <FavoriteIcon color="secondary" /> : <FavoriteIcon color="disabled" /> } */}
+                </IconButton>
+              </Grid>
+            ))}
+          </Grid>
+        </Grid>
+      </SearchBookLayout>
+    </React.Fragment>
+  );
+};
+
+export default SearchBookContainer;
+
+
+
+```
+
+</div></details>
+
+
+console.logの部分はAPIから引っ張ってきたデータがどのような状態なのか確認するためにつけています。
+本番環境の場合は当然削除しておきますが、開発ではこのままでも大丈夫です。
+ポイントは3つあるので、1つずつ見ていきます。
+
+#### Point1 APIからデータを持ってくる
+
+`async()`を使って非同期でリクエストを送ります。
+ここは使うAPI次第になりますが、今回の場合はGoogleBooksAPIなので詳しいことは[こちらのページ](https://developers.google.com/books/docs/v1/using)を参照して頂くとして、以下のようにリクエストを送ります。
+
+<details><summary>リクエストのオプションみたいなもの</summary><div>
+
+```jsx
+
+const searchTitle = async (data) => {
+  const params = {
+    // 完全一致で探したい
+    q: `${GBAParams.QUERY_TITLE}${data.title}`,
+    // 日本の書籍のみ検索
+    Country: "JP",
+    // データを引っ張ってくる数(デフォルトは10、最大が40まで)
+    maxResults: 40,
+    // 新しいものから順に引っ張ってくる
+    orderBy: "newest",
+    // 書籍のみ引っ張ってくる(雑誌は取らない)
+    printType: "books",
+  };
+}
+
+
+```
+
+</div></details>
+
+引数のdataにはフォームから送られてくる情報が入ってきます。
+つまり、`data.title`の部分には書籍名が入ることになります。
+問題はconst params以下。
+qには検索オプションが入りますが、こちらは別ファイルにまとめて書いてあってそれを必要に応じて呼び出す形にしています。
+そのファイルがこちらです。
+
+```jsx
+
+export const GBAParams = {
+    ROOT_URL: `https://www.googleapis.com/books/v1/volumes`,
+    // タイトルで検索
+    QUERY_TITLE: `intitle:`,
+    // 著者で検索
+    QUERY_AUTHOR: `inauthor:`,
+    // 版元で検索
+    QUERY_PUBLISHER: `inpublisher:`,
+    // カテゴリ(GoogleBooks内でのカテゴライズ)で検索
+    QUERY_CATEGORY: `subject:`,
+    // ISBNで検索
+    QUERY_ISBN: `isbn:`,
+}
+
+```
+
+ROOT_URLにはAPIに送るリクエストURL、QUERY＿～の部分がオプションになります。
+今回はタイトルで検索したいので上記ような書き方になります。
+他のオプションについてはドキュメントを参照。
+
+では実際にリクエストを送ります。
+
+```jsx
+
+try {
+  // 第2引数に先程のParamsを設定
+  const response = await axios.get(baseUrl, { params: params });
+  // responseにAPIを叩いた結果が入るので、適宜ほしい形で取り出す
+  const filter_items = response.data.items
+  // 今回は出版日が古い順(刊行順)で表示したいのでさらに加工する
+  const filtered_items = filter_items.sort(function (a,b) {
+    if (a.volumeInfo.publishedDate < b.volumeInfo.publishedDate) {
+      return -1;
+    } else {
+      return 1;
+    }
+  })
+  // Stateに格納する、このあたりはフィルタリング機能の部分で一緒に説明します
+  setBooks(filtered_items)
+  setDefaultBooks(filtered_items);
+} catch (error) {
+  console.log(error.response);
+}
+};
+
+```
+
+#### Point2 フィルタリング機能をつける
+
+Point1で検索結果を一覧表示するための準備は整ったので、次はフィルタリングをつけていきたいと思います。
+ありがち……というよりついてないとこの手の機能は利便性に欠けるので必須だと思いますが、GoogleBooksAPIはあまり使い勝手が良くなく、期間限定試し読みのデータまで拾ってくるのですが、それを除外する方法がないので自分である程度やれるところまで除外しなければなりません。
+ということでやっていきましょう。
+
+<details><summary>書いたコード</summary><div>
+
+```jsx
+
+const handleFilter = () => {
+  if(!filterFlag) {
+    const filter_items = book.filter(
+      (book) => book.volumeInfo.seriesInfo !== undefined
+    )
+    const filtered_items = filter_items.sort(function(a,b) {
+      if(a.volumeInfo.publishedDate < b.volumeInfo.publishedDate) {
+        return -1;
+      } else {
+        return 1;
+      }
+    });
+    setBooks(filtered_items)
+    setFilterFlag(true)
+  } else if (filterFlag === true) {
+    setBooks(defaultBooks)
+    setFilterFlag(false)
+  }
+}
+
+```
+
+</div></details>
+
+
+`try-catch`の構文で書いていきます。
+catchの部分には適宜エラーハンドリングを行ってください。
+`axios()`でリクエストを送信します。
+今回はGETリクエストを送りたいので`axios.get()`とします。
+第1引数にはリクエストURL、第2引数には送信するDataを入れます。
+Dataはオブジェクトの形で送りましょう。
+リクエストの送り方はAPIによって違うのでドキュメント等を確認するのをおすすめします。
+
+
+
+
+
 
 
 
