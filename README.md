@@ -10,10 +10,14 @@
 現在これを元に就職活動をしていますが、それはそれとして今回React+DRFでアプリを作ってみたはいいものの、チュートリアルを終えてすぐに制作にかかったため逐次調べながらの作業となって、
 進行がイマイチであったのともっと最適化できることもあっただろうなというものを感じていました。
 そもそも、React + DRFでの制作は割とニッチなものらしくまとまった情報もなく私自身苦労したので、もし後続の方に同じ構成で制作される方がいた場合はその際の道標に(ググる際の助けに)なれればというのと、私もこれからこの2つのスキルの練度を上げていきたいと思っているので知識を整理して、定着させるという意味でも今回この記事を書いてみようかと思います。
+私と同じようにReact + DRF + Firebaseを使って開発してみようとかそれぞれのスキルについて学んでいて詰まったところがあるけれどどう調べたらいいかわからない……といったような場合のヒントになれればという思いで書いていますが、私はまだエンジニアではなく素人なのでここに書いてあることを鵜呑みにせず、なるべくドキュメントや参考の記事のリンクを貼っていきますのでそちらを合わせてご覧になって頂けると助かります。
+
 Firebaseに関しては上記の記事では採用していませんでしたが、作ってみて認証はめんどくさい(フロント+Djnagoだとさらに)と感じたのでならばこちらに任せるほうが堅いと感じたので一緒に見ていこうとおもいます。
+何か訂正・ご指摘等ございましたら遠慮なくおっしゃってください。
+
 
 適宜更新していきます。
-最新: 2020/12/20
+最新: 2020/1/19
 
 ## 0. 最低限押さえておくこと
 
@@ -1235,7 +1239,7 @@ as属性に使いたいコンポーネントを指定する形です。
 `TextField`にはlabelやhelptextなどの属性が内包されているのでとりあえずこれだけで使うことができます。
 カスタマイズがしたい、あるいは`Inpus`コンポーネントで1から作りたいという方はドキュメントを参照してください。
 
-### 3.3 各コンポーネントの作成
+### 3.3 メインコンポーネントの作成
 
 では各コンポーネントを作っていきます。
 まずは中心部分となるAPIを叩いて、結果を描画する役割があるコンポーネントを見ていきます。
@@ -1260,7 +1264,7 @@ import { GBAParams } from "../Utils/GoogleBooksAPIs";
 
 const SearchBookContainer = () => {
   const [books, setBooks] = useState([]);
-  const [defaultBooks, setDefaultBooks] = useState(false);
+  const [defaultBooks, setDefaultBooks] = useState([]);
   const [filterFlag, setFilterFlag] = useState(false);
   const { control } = useForm();
 
@@ -1469,6 +1473,14 @@ try {
 
 ```
 
+`try-catch`の構文で書いていきます。
+catchの部分には適宜エラーハンドリングを行ってください。
+`axios()`でリクエストを送信します。
+今回はGETリクエストを送りたいので`axios.get()`とします。
+第1引数にはリクエストURL、第2引数には送信するDataを入れます。
+Dataはオブジェクトの形で送りましょう。
+リクエストの送り方はAPIによって違うのでドキュメント等を確認するのをおすすめします。
+
 #### Point2 フィルタリング機能をつける
 
 Point1で検索結果を一覧表示するための準備は整ったので、次はフィルタリングをつけていきたいと思います。
@@ -1480,10 +1492,13 @@ Point1で検索結果を一覧表示するための準備は整ったので、�
 ```jsx
 
 const handleFilter = () => {
+  // フラグの状態でフィルタリングのON・OFF
   if(!filterFlag) {
-    const filter_items = book.filter(
+    // filter()メソッドで絞り込むことができる
+    const filter_items = books.filter(
       (book) => book.volumeInfo.seriesInfo !== undefined
     )
+    // Point1と同じく刊行順に表示
     const filtered_items = filter_items.sort(function(a,b) {
       if(a.volumeInfo.publishedDate < b.volumeInfo.publishedDate) {
         return -1;
@@ -1503,18 +1518,293 @@ const handleFilter = () => {
 
 </div></details>
 
-
-`try-catch`の構文で書いていきます。
-catchの部分には適宜エラーハンドリングを行ってください。
-`axios()`でリクエストを送信します。
-今回はGETリクエストを送りたいので`axios.get()`とします。
-第1引数にはリクエストURL、第2引数には送信するDataを入れます。
-Dataはオブジェクトの形で送りましょう。
-リクエストの送り方はAPIによって違うのでドキュメント等を確認するのをおすすめします。
+ここでHookを使ってStateをどうしているか確認してみます。
 
 
+```jsx
+
+// APIから得たデータが格納される。実際に描画するときに使う。
+const [books, setBooks] = useState([]);
+// 上と同じだがこちらは加工したい場合には用いない。フィルタリングをオフにするときなどに使用。
+const [defaultBooks, setDefaultBooks] = useState([]);
+// フィルタリングがオンかオフかのフラグ
+const [filterFlag, setFilterFlag] = useState(false);
 
 
+```
+
+ポイントはbooksの初期値を空のリストにしておくということです。
+何故かというとPoint3での以下のレンダリング部分を見ていただくとわかるのですが
+
+
+```html
+
+<Grid container item  xs={12} spacing={1}>
+  <!-- この部分でmap()を使っている -->
+  {books.map((book, index) => (
+    <Grid item xs={6} md={4} align="center" key={index}>
+          <img
+            alt={`${book.volumeInfo.title} book`}
+            src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
+          />
+      <h3>{book.volumeInfo.title}</h3>
+      <p>{book.volumeInfo.authors[0]}</p>
+      <p>{book.volumeInfo.authors[1]}</p>
+      <p>発売日：{book.volumeInfo.publishedDate}</p>
+      <p><a href={book.volumeInfo.infoLink}>購入ページへ</a></p>
+      <p><a href={book.volumeInfo.previewLink}>試し読み</a></p>
+      {/* いいねボタン、バックエンドと非同期しないと使えないのでダミーでおいておく */}
+      <IconButton onClick={()=> console.log}>
+        {/* {like ? <FavoriteIcon color="secondary" /> : <FavoriteIcon color="disabled" /> } */}
+      </IconButton>
+    </Grid>
+  ))}
+</Grid>
+
+```
+
+`map()`を使うということは配列(リスト)に対して使わないといけません。
+しかし、初回のレンダリング時は当然まだAPIを叩いていないので何も情報がありません。
+なので迂闊に
+
+```jsx
+
+const [books, setBooks] = useState();
+
+```
+
+としてしまうとbooksは配列じゃないので`map()`は使えないとエラーを吐かれてしまいます。
+なので初期値として空のリストを設定しておかないといけないわけです。
+私も実際にTodoアプリを作った際にこれに非常に悩まされ、結果かなり強引に解決したのですがちゃんと振り返ってみるとこういう基本的なことができていなかったということを痛感させられますね。
+上記のようにStateにリストを保存して、それをmapで順にレンダリングするという処理は常套句のようなものなのですが、こういうところは知識がある人にとっては当たり前のことなので特に解説がないことがほとんどだったりするので辛い思いをよくします。
+強くなりたいですね。
+Reactのレンダリングについては下記の記事や図が参考になります。
+私はまだまだ理解できないのでしばしばこれらを確認します。
+
+[Complete Guide to React Rendering Behavior](https://blog.isquaredsoftware.com/2020/05/blogged-answers-a-mostly-complete-guide-to-react-rendering-behavior/)
+[Reactのレンダリングに関する完全ガイド](https://qiita.com/hellokenta/items/6b795501a0a8921bb6b5)
+[Reactのライフサイクル図](https://projects.wojtekmaj.pl/react-lifecycle-methods-diagram/)
+
+
+閑話休題。
+`filter()`についてですがこちらは与えられた関数の処理に合致したすべての配列から新しい配列を生成する関数です。
+つまり
+
+```jsx
+
+const filter_items = books.filter(
+  // booksコピーしたbookを生成
+  // book.volumeInfo.seriesInfo !== undefinedである要素のみ抽出した配列を作成
+  // filter_itemsに上記でできたbookを代入
+  (book) => book.volumeInfo.seriesInfo !== undefined
+)
+
+```
+
+ということになります。
+詳しくは[ドキュメント](https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)を参照してください。
+実際の書き方は使用しているAPIや返ってきたデータの受け取り方によって異なりますので注意しましよう。
+
+
+#### Point3 レンダリング部分
+
+最後にレンダリング部分を見てみましょう。
+
+<details><summary>書いたコード</summary><div>
+
+```jsx
+
+  return (
+    <React.Fragment>
+    {/* SearchBookLayout=<Container>と思ってください */}
+      <SearchBookLayout>
+        <Box mb={4}>
+          <Grid container direction="row" justify="center">
+            {/* SearchBookFormはフォーム部分のコンポーネントです */}
+            <SearchBookForm onSubmit={searchTitle} onFilter={handleFilter} />
+          </Grid>
+        </Box>
+        {/* ここに検索結果を一覧表示させる */}
+        <Grid container direction="row" justify="center" alignItems="center">
+          <Grid container item  xs={12} spacing={1}>
+            {books.map((book, index) => (
+              <Grid item xs={6} md={4} align="center" key={index}>
+                {/* 以下は実際のデータやAPIの取り出し方によって変わります */}
+                <img
+                  alt={`${book.volumeInfo.title} book`}
+                  src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
+                />
+                <h3>{book.volumeInfo.title}</h3>
+                <p>{book.volumeInfo.authors[0]}</p>
+                <p>{book.volumeInfo.authors[1]}</p>
+                <p>発売日：{book.volumeInfo.publishedDate}</p>
+                <p><a href={book.volumeInfo.infoLink}>購入ページへ</a></p>
+                <p><a href={book.volumeInfo.previewLink}>試し読み</a></p>
+                {/* いいねボタン、バックエンドと非同期しないと使えないのでダミーでおいておくく */}
+                <IconButton onClick={()=> console.log}>
+                  {/* {like ? <FavoriteIcon color="secondary" /> : <FavoriteIcon color="disabled" /> } */}
+                </IconButton>
+              </Grid>
+            ))}
+          </Grid>
+        </Grid>
+      </SearchBookLayout>
+    </React.Fragment>
+  );
+
+```
+
+</div></details>
+
+Reactコンポーネントは必ず親要素を1つだけ用意しないといけません。
+つまり
+
+```html
+
+<div>
+～～～～～～
+</div>
+
+<div>
+～～～～～～
+</div>
+
+
+```
+
+といった書き方はできません。
+必ず1つの親要素でラップしてその中で上記のように書いていく必要があります。
+しかし、`div`を安易に使うと不必要な`div`が生まれてしまうなどよろしくないので代わりとして`<React.Fragment>`を使うことになります。
+
+### 3.4 フォームコンポーネントの作成
+
+次はフォーム部分のコンポーネントを見ていきましょう。
+
+<details><summary>書いたコード</summary><div>
+
+```jsx
+
+import React from "react";
+import { useForm, Controller } from "react-hook-form";
+import { ErrorMessage } from "@hookform/error-message";
+import { TextField, Button, Grid, Box } from "@material-ui/core";
+
+const SearchBookForm = ({ onSubmit, onFilter }) => {
+  const { control, handleSubmit, errors } = useForm();
+
+  return (
+    <React.Fragment>
+    {/* onSubmitにはSearchBookContainerで定義したAPIを叩くメソッドが入る */}
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Grid item xs={12}>
+          <Controller
+            as={
+              <TextField
+                inputProps={{ min: 0, style: { textAlign: "center" } }}
+              />
+            }
+            name="title"
+            control={control}
+            rules={{
+              required: "書籍のタイトルを入力してください",
+              maxLength: {
+                value: 100,
+                message: "タイトルは100文字以内です",
+              },
+            }}
+            defaultValue=""
+          />
+          <div>
+            <ErrorMessage errors={errors} name="multipleErrorInput">
+              {({ messages }) =>
+                messages &&
+                Object.entries(messages).map(([type, message]) => (
+                  <p key={type}>{message}</p>
+                ))
+              }
+            </ErrorMessage>
+          </div>
+        </Grid>
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <Box mt={1} textAlign="center">
+              <Controller
+                as={
+                  <Button variant="outlined" color="primary">
+                    探す
+                  </Button>
+                }
+                name="submit"
+                control={control}
+                defaultValue=""
+                onClick={handleSubmit(onSubmit)}
+              />
+            </Box>
+          </Grid>
+          <Grid item xs={6}>
+            <Box mt={1} textAlign="center">
+              <Controller
+                as={
+                  <Button variant="outlined" color="primary">
+                    既刊
+                  </Button>
+                }
+                name="submit"
+                control={control}
+                defaultValue=""
+                onClick={handleSubmit(onFilter)}
+              />
+            </Box>
+          </Grid>
+        </Grid>
+      </form>
+    </React.Fragment>
+  );
+};
+
+export default SearchBookForm;
+
+```
+
+</div></details>
+
+Reactでフォームを作る際は`Redux Form`を使うのが定番だったようですが製作者から非推奨と案内が出ています。
+代替は色々ありますが私は[React Hook Form](https://react-hook-form.com/jp/api/)を使っています。
+React Hook Formについてはドキュメントを参照していただくとしていくつか見ていきます。
+
+
+#### Controllerコンポーネント
+
+ReactHookFormはMaterial-UIやReact-BootStrapなどと使う場合そのまま使うとうまく行かないことがあります。
+そのためにReact Hook Formで用意されているControllerコンポーネントを使って使いたいコンポーネントをラップしてあげる必要があります。
+
+```jsx
+
+<Controller
+  // as属性に使いたいコンポーネントを定義する
+  // inputPropsは適用するスタイルを定義している
+  as={
+    <TextField
+      inputProps={{ min: 0, style: { textAlign: "center" } }}
+    />
+  }
+  name="title"
+  // 書いておく
+  control={control}
+  // バリデーションルール
+  rules={{
+    required: "書籍のタイトルを入力してください",
+    maxLength: {
+      value: 100,
+      message: "タイトルは100文字以内です",
+    },
+  }}
+  // 初期値
+  defaultValue=""
+/>
+
+
+```
 
 
 

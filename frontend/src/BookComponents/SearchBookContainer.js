@@ -36,7 +36,7 @@ import { GBAParams } from "../Utils/GoogleBooksAPIs";
 
 const SearchBookContainer = () => {
   const [books, setBooks] = useState([]);
-  const [defaultBooks, setDefaultBooks] = useState(false);
+  const [defaultBooks, setDefaultBooks] = useState([]);
   const [filterFlag, setFilterFlag] = useState(false);
   const { control } = useForm();
   // const classes = useStyles();
