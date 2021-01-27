@@ -1,0 +1,574 @@
+# React + DRF + Firebase でアプリを作成する際の覚え書きその 2
+
+## はじめに
+
+[前回](https://qiita.com/shitikakei/items/9e599f1eea0a9b42459a#35-%E8%A6%AA%E3%82%B3%E3%83%B3%E3%83%9D%E3%83%BC%E3%83%8D%E3%83%B3%E3%83%88%E3%82%92%E4%BD%9C%E3%82%8B) の続きです。
+
+## 0. 今回やること
+
+レンダリングが無駄に行われてしまうとパフォーマンスが悪くなるのでなるべく避けたいのでここからは React Hooks における use~()を見ていきたいと思います。
+
+ただし、React.memo、useCallback、useMemo に関しては後述する関係上今回は使わないことにします。
+
+### 1 useEffect
+
+React Hooks を使う上で避けては通れないというより必ず使うことになる Hook です。
+基本的には[ドキュメント](https://ja.reactjs.org/docs/hooks-effect.html) にあるように
+何か変更があったときにだけ更新してレンダリングをしたいという場合に例えば前回のコードを見てみます。
+
+<details><summary>書いたコード</summary><div>
+
+```jsx
+
+const SearchBookContainer = () => {
+  const [books, setBooks] = useState([]);
+  const [defaultBooks, setDefaultBooks] = useState([]);
+  const [filterFlag, setFilterFlag] = useState(false);
+  const { control } = useForm();
+  // const classes = useStyles();
+
+  const baseUrl = GBAParams.ROOT_URL;
+  console.log(baseUrl);
+
+
+  const searchTitle = async (data) => {
+    const params = {
+      // 完全一致で探したい
+      q: `${GBAParams.QUERY_TITLE}${data.title}`,
+      // filter: `paid-ebooks`,
+      Country: "JP",
+      maxResults: 40,
+      orderBy: "newest",
+      // startIndex: 0,
+      printType: "books",
+    };
+    console.log(params);
+    try {
+      const response = await axios.get(baseUrl, { params: params });
+      console.log(response.data.items);
+      console.log(response.data);
+      console.log(response);
+
+      const filter_items = response.data.items
+      // 刊行順にソート
+      const filtered_items = filter_items.sort(function (a, b) {
+        if (a.volumeInfo.publishedDate < b.volumeInfo.publishedDate) {
+          return -1;
+        } else {
+          return 1;
+        }
+
+      });
+      // 最終的に描画する部分
+      setBooks(filtered_items)
+      setDefaultBooks(filtered_items);
+    } catch (error) {
+      console.log(error.response);
+    }
+  };
+
+
+  const handleFilter = () => {
+    if (!filterFlag) {
+      // 期間限定試し読みなどを省く
+      const filter_items = books.filter(
+        (book) => book.volumeInfo.seriesInfo !== undefined
+      )
+      // 刊行順にソート
+      const filtered_items = filter_items.sort(function (a, b) {
+        if (a.volumeInfo.publishedDate < b.volumeInfo.publishedDate) {
+          return -1;
+        } else {
+          return 1;
+        }
+
+      });
+      console.log(filtered_items)
+      setBooks(filtered_items)
+      setFilterFlag(true)
+    } else if (filterFlag === true) {
+      setBooks(defaultBooks)
+      setFilterFlag(false)
+    }
+
+  }
+  // useEffectを書く
+
+  useEffect(() => {
+    setBooks(books);
+
+  }, [books]);
+
+
+```
+
+</div></details>
+
+フォームから API を叩き、その結果を books という State に格納しそれを描画するというのが前回作ったコンポーネントでした。
+React は常に Props と State の更新を見張っていて、変更を感知するとレンダリングを行い更新の必要があるかどうかをチェックします。
+で、これの何が問題かというと例えばフォームの値が変わったとか、複数の State を扱っている場合だとある State が変更された……なんていうところまで感知して、レンダリングを行ってしまう……というところだそうです。
+一挙手一投足ごとにページ全体をチェックして……なんて処理を走らせていたらページが重くなってしまうのでそれは避けないといけません。
+useEffect の場合はレンダリング後に指定した処理を行いたい場合に用いられますが、その際第 2 引数に値を設定するとその値が変更しない限り、再レンダーをしないという処理にすることができます。
+今回は初期値が空のリストかつ、こちらからアクションを起こさない限り books の中身に変化はないので効果がいまいちわからないかもしれませんが例えば Todo リストのアプリを作る場合、初期値は空のリストでも初回のレンダリング時に API を叩き、既存のタスクのデータを引っ張ってくる……なんてことをする場合には有効になります。
+じゃないとリロードするたびに無駄なレンダリングを行ってしまうので。
+
+## 2. レンダリングを最適化したいとき
+
+レンダリングがどのようなものかは前回軽く押さえましたが、じゃあ再レンダリングって実際はどのようなときに起こるのかというと主に以下のような場合に起きるみたいです。
+
+- props(コンポーネントに渡された引数)か state に変更があった場合
+- 子コンポーネントの場合、親コンポーネントが再レンダリングされた場合
+- コンポーネント内に関数を使用している場合やコールバック関数を props として受け取っている場合
+- 比較されたコンポーネントが同値でないと判断された場合
+
+1 つ目に関してはレンダリングの主目的でもありますので、当然といえば当然ですね。
+2 つ目が曲者、これがこのあたりの話をややこしくしている原因だと思いました。
+これは、上位コンポーネントがレンダリングされた場合、子コンポーネントは問答無用で再レンダリングされるということになります。
+3 つ目と 4 つ目も曲者で、React では関数はレンダリングされるたびに再生成されます。
+すると、関数の内容が同じだとしても再生成されているので React はそれを等価とせず、コンポーネントが変更されたものとして検知し、レンダリングを始めてしまうということなのです。
+
+つまり上記 4 点からわかることはレンダリングの最適化を図るにはそもそも React のコンポーネント設計をしっかりとできないといけないということになります。
+1 つ目はともかく、2 つ目以降はコンポーネントの親子関係はもちろん、props のやりとりはあるのか?、コンポーネントの親子関係に即してきちんと関数定義できているか……etc と気を配ることが多いからです。
+現に私もできていないのでこうして頭を悩ますことになっているわけです。
+ちなみに、React Hook Form を使っている場合は、Redux Form の代替として使っている関係上、props のやり取りをグローバルに行ってしまうので、必然的に再レンダリングが発生してしまうようです。
+※[参考: FormContext パフォーマンス](https://react-hook-form.com/jp/advanced-usage/#FormProviderPerformance)
+
+上記参考リンクにあるようにそれを回避する手段もありますが今回は省いてレンダリングを許容することにしていますのであしからず……私にはまだ難しいです。
+
+閑話休題。
+なので、React.memo、useCallback、useMemo を使った無駄な再レンダリングの回避(界隈ではチューニングなんて呼ばれているみたいなので、以後それに倣います)は、使う場面や状況を使用者が的確に判断的な糸いけないという分野になるので、必ずしも使うべきものではないということになります。
+しかし、現実はチューニングされていれば、されているほど負荷は最適化されていくので逃げられないものになるわけですね。
+じゃあ、チューニングをしたほうがいい場面っていつなの? というと以下の場面が挙げられるようです。
+
+- 負荷の高い処理を伴うコンポーネントがある
+- 頻繁に再レンダリングされるコンポーネントがある
+
+この 2 つの場面でじゃあ React.memo、useCallback、useMemo ってどうなっているの？ というのをドキュメントや参考記事を見ながら見ていきたいと思います。
+
+### 2.1 チューニングって何をやっているの?
+
+一言でいうと「メモ化」を行っているということになるようです。
+具体的には
+
+**処理結果をキャッシュにして保持し、同様の処理結果が見込まれ、その値が必要な際、場合再処理せずキャッシュから利用できるようにする**
+
+ということになるようです。
+
+それぞれ React.memo がコンポーネントのメモ化、useCallback が関数のメモ化、useMemo が値のメモ化になります。
+では、[こちらの記事](https://qiita.com/soarflat/items/b9d3d17b8ab1f5dbfed2#usememo)のサンプル・コードで挙動を確認して行きたいと思います。
+
+### 2.2 React.memo
+
+まずは以下のように React.memo を使わないで書いてみます。
+コードの方は参考元のものをアロー関数での書き方に置き換えたものを使用させて頂きました。
+
+```jsx
+import React, { useState } from "react";
+
+const Child = (props) => {
+  console.log("render Child");
+  return <p>Child: {props.count}</p>;
+};
+
+const App = () => {
+  console.log("renger App");
+  const [count1, setCount1] = useState(0);
+  const [count2, setCount2] = useState(0);
+
+  return (
+    <React.Fragment>
+      <button onClick={() => setCount1(count1 + 1)}>countup App count</button>
+      <button onClick={() => setCount2(count2 + 1)}>countup Child count</button>
+      <p>App: {count1}</p>
+      <Child count={count2} />{" "}
+    </React.Fragment>
+  );
+};
+
+export default App;
+```
+
+挙動は以下の通りです。
+
+![Videotogif (3).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/1b837eb6-7fce-33e2-bde6-10e81fa24cf6.gif)
+
+それぞれのコンポーネントの props や State が更新されると再レンダリングされ、App コンポーネントが更新されると、一見変更のない子コンポーネントまで更新されてしまっているのがわかると思います。
+では、React.memo を使うとどうなるのか見てみましょう。
+
+```jsx
+import React, { useState } from "react";
+
+const Child = React.memo((props) => {
+  console.log("render Child");
+  return <p>Child: {props.count}</p>;
+});
+
+const App = () => {
+  console.log("render App");
+  const [count1, setCount1] = useState(0);
+  const [count2, setCount2] = useState(0);
+
+  return (
+    <React.Fragment>
+      <button onClick={() => setCount1(count1 + 1)}>countup App count</button>
+      <button onClick={() => setCount2(count2 + 1)}>countup Child count</button>
+      <p>App: {count1}</p>
+      <Child count={count2} />{" "}
+    </React.Fragment>
+  );![Videotogif (3).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/3cbb59dd-acfd-1c05-a454-60c8dab0594a.gif)
+
+};
+
+export default App;
+```
+
+挙動は以下の通りです。
+
+![Videotogif (4).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/5ddb4e2f-6ac0-6667-e367-8cb32e738a37.gif)
+
+APP コンポーネントの再レンダリングに伴って子コンポーネントが再レンダリングされていないことがわかると思います。
+ここから分かる通り、`React.memo`を使うにはコンポーネントに props を引数として与える必要があり、それを元にレンダリングの際に前後のコンポーネントを等価かどうか比較をして、キャッシュされたものを使うのか再レンダリングするのかを判断するようです。
+以下[ドキュメント](https://ja.reactjs.org/docs/react-api.html#reactmemo)より、注意事項です。
+
+> React.memo は props の変更のみをチェックします。React.memo でラップしているあなたのコンポーネントがその実装内で useState や useContext フックを使っている場合、state やコンテクストの変化に応じた再レンダーは発生します。
+
+> デフォルトでは props オブジェクト内の複雑なオブジェクトは浅い比較のみが行われます。比較を制御したい場合は 2 番目の引数でカスタム比較関数を指定できます。(下記のコード参照)
+
+```jsx
+
+const MyComponent = React.memo((props) => {
+    /* render using props */
+})
+
+const areEqual = React.memo((prevProps, nextProps) => {
+      /*
+  nextProps を render に渡した結果が
+  prevProps を render に渡した結果となるときに true を返し
+  それ以外のときに false を返す
+  */
+})
+
+const RenderContent = () => {
+    return(
+        // ...............
+    )
+}
+
+export default RenderContent
+
+```
+
+同じようにレンダリングコストが高い、あるいは頻繁にレンダリングが起きる場合も見てみましょう。
+
+```jsx
+// レンダリングコストが高い場合
+
+import React, { useState } from "react";
+
+const Child = React.memo((props) => {
+  let i = 0;
+  //   この行の処理がレンダリングの度に入るのでコストが高いということになる
+  while (i < 1000000000) i++;
+  console.log("render Child");
+  return <p>Child: {props.count}</p>;
+});
+
+const App = () => {
+  console.log("render App");
+
+  const [count1, setCount1] = useState(0);
+  const [count2, setCount2] = useState(0);
+
+  return (
+    <>
+      <button onClick={() => setCount1(count1 + 1)}>countup App count</button>
+      <button onClick={() => setCount2(count2 + 1)}>countup Child count</button>
+      <p>App: {count1}</p>
+      <Child count={count2} />
+    </>
+  );
+};
+
+export default App;
+```
+
+![Videotogif (5).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/fe75d166-3aab-9b7b-86ca-2b417011fd1f.gif)
+
+```jsx
+// 親コンポーネントが頻繁に再レンダリングされることが想定される場合
+
+import React, { useState, useEffect, useRef } from "react";
+
+const Child = React.memo(() => {
+  console.log("render Child");
+  return <p>Child</p>;
+});
+
+const App = () => {
+  console.log("render App");
+
+  const [timeLeft, setTimeLeft] = useState(100);
+  //  App: {timeLeft}への参照
+  const timerRef = useRef(null);
+  // timeLeftRef.currentへの参照
+  const timeLeftRef = useRef(timeLeft);
+
+  useEffect(() => {
+    timeLeftRef.current = timeLeft;
+  }, [timeLeft]);
+
+  const tick = () => {
+    if (timeLeftRef.current === 0) {
+      clearInterval(timerRef.current);
+      return;
+    }
+    setTimeLeft((prevTime) => prevTime - 1);
+  };
+
+  const start = () => {
+    timerRef.current = setInterval(tick, 10);
+  };
+
+  const reset = () => {
+    clearInterval(timerRef.current);
+    setTimeLeft(100);
+  };
+
+  return (
+    <>
+      <button onClick={start}>start</button>
+      <button onClick={reset}>reset</button>
+      <p>App: {timeLeft}</p>
+      <Child />
+    </>
+  );
+};
+
+export default App;
+```
+
+![ダウンロード.gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/4a90c89b-e3da-4c20-56ee-bc78e61b16f4.gif)
+
+いずれも子コンポーネントの再レンダリングが抑えられていることが確認できます。
+useRef に関しては[こちら](https://ja.reactjs.org/docs/hooks-reference.html#useref)や[こちら](https://tyotto-good.com/blog/react-ref#ref%E3%81%AE%E6%B3%A8%E6%84%8F%E7%82%B9)を参照してください。
+基本的には DOM ノードへの参照、特に今回のような current 属性を扱うときに使用する場合があるみたいです。
+DOM に関しては私はまだ門外漢なので今回はこれ以上掘り下げないことにします。
+
+さて、React.memo を適切に使うと無駄なレンダリングを抑制できることがわかりましたが先にも書いたようにコンポーネント内でコールバック関数を使った場合はその限りではありません。
+なのでその場合は useCallback を使い、コールバック関数をメモ化しないといけません
+
+### 2.3 useCallback
+
+```jsx
+import React, { useState } from "react";
+
+const Child = React.memo((props) => {
+  console.log("render Child");
+  return <button onClick={props.handleClick}>Child</button>;
+});
+
+const App = () => {
+  console.log("render App");
+
+  const [count, setCount] = useState(0);
+  // このコールバック関数が問題
+  const handleClick = () => {
+    console.log("click");
+  };
+
+  return (
+    <>
+      <p>Counter: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment count</button>
+      <Child handleClick={handleClick} />
+    </>
+  );
+};
+
+export default App;
+```
+
+ここに GIF
+
+React.memo が使われているのに、App コンポーネントがレンダリングされるたびに子コンポーネントがレンダリングされていることが確認できると思います。
+なので、このコールバック関数をメモ化することになります。
+
+[ドキュメント](https://ja.reactjs.org/docs/hooks-reference.html#usecallback)
+
+```jsx
+import React, { useState, useCallback } from "react";
+
+const Child = React.memo((props) => {
+  console.log("render Child");
+  return <button onClick={props.handleClick}>Child</button>;
+});
+
+const App = () => {
+  console.log("render App");
+
+  const [count, setCount] = useState(0);
+  const handleClick = useCallback(() => {
+    console.log("click");
+  }, []);
+  return (
+    <>
+      <p>Counter: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment count</button>
+      <Child handleClick={handleClick} />
+    </>
+  );
+};
+
+export default App;
+```
+
+ここに GIF
+
+先ほどと違い、App コンポーネントが再レンダリングされても子コンポーネントの再レンダリングが起きていないことが確認できます。
+
+useCallback の引数にはコールバック関数ともしそのコールバック関数が依存している要素がある場合それを指定する必要があります。
+依存する要素というのは例えば変数をコールバック関数内で用いている場合、その変数がそれにあたります。
+簡単な例だと、参考記事にあるようなものの他に
+
+```jsx
+const [name, setName] = useState("");
+
+// SetName()はnameによって出力が変わる
+const test = () => {
+  name = "sample";
+  setName(name);
+};
+```
+
+こういうのが依存関係にあると言えるかと思います。
+なのでこれをメモ化する際には
+
+```jsx
+const [name, setName] = useState("");
+
+// 第2引数にnameを指定する
+const test = useCallback(() => {
+  name = "sample";
+  setName(name);
+}, [name]);
+```
+
+と書けばいいわけです。
+先述の例のように依存する要素がなければ第 2 引数は空になります。
+実際には name に当たる部分はフォームからの入力要素や API から引き出したデータを格納したりするので、使う機会は結構あるのかなと感じます。
+
+ではもう一つ例を見てみます。
+
+```jsx
+import React, { useState, useCallback } from "react";
+
+const Child = React.memo((props) => {
+  console.log("render Child");
+  // ここにhandleClick()を渡したい
+  return <button onClick={props.handleClick}>Child</button>;
+});
+
+const App = () => {
+  console.log("render App");
+
+  const [count, setCount] = useState(0);
+  const handleClick = useCallback(() => {
+    console.log("click");
+  }, []);
+
+  return (
+    <>
+      <p>Counter: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment count</button>
+      { /* propsのうちhandleClickに当たる部分を渡す書き方をしたので以下のように書く */}
+      <Child handleClick={handleClick} />
+    </>
+  );
+};
+
+export default App;
+
+```
+
+ここにGIF
+
+さて、ここまでで気づいた方もいらっしゃると思いますが、その性質上`useCallback`は`React.memo`と使うことが前提であり、単独でメモ化しても意味はないようです。
+ちょっと考えれば`React.memo`で該当コンポーネントがメモ化されていないのではそれも納得です。
+あとは、`useCallback`でメモ化した関数であってもそれを生成しているコンポーネントで使用した場合は意味をなさないようです。
+
+実際に例を見てみます。
+
+```jsx
+
+// メモ化していないコンポーネントにuseCallbackでラップした関数を渡した場合
+
+import React, { useState, useCallback } from "react";
+
+// React.memo未使用
+const Child = props => {
+  console.log("render Child");
+  return <button onClick={props.handleClick}>Child</button>;
+};
+
+const App = () => {
+  console.log("render App");
+
+  const [count, setCount] = useState(0);
+  const handleClick = useCallback(() => {
+    console.log("click");
+  }, []);
+
+  return (
+    <>
+      <p>Counter: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment count</button>
+      <Child handleClick={handleClick} />
+    </>
+  );
+}
+
+export default App
+
+
+```
+
+ここにGIF
+
+
+```jsx
+
+import React, { useState, useCallback } from "react";
+
+const App = () => {
+  console.log("render App");
+
+  const [count, setCount] = useState(0);
+  const handleClick = useCallback(() => {
+    console.log("memonized callback");
+  }, []);
+
+  return (
+    <>
+      <p>Counter: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment count</button>
+      <button onClick={handleClick}>logging</button>
+    </>
+  );
+}
+
+export default App
+
+```
+
+ここにGIF
+
+
+それではここまでの内容を簡単にまとめると
+
+- `React.memo`と`useCallback`は基本的にセットで扱われる(コールバック関数がなければ後者は不要)
+- `React.memo`を使う場合時はpropsのうちどの部分が再レンダリングの比較対象になるのかわかるように書くこと(propsに依存してないコンポーネントなら別)
+- `useCallback`を使う時は当該関数を生成していないコンポーネントで関数が使用されるように書くようにして、依存する要素を想定する場合はそれが明確になるような書き方をすること
+
+と以上のようになります。
+
+## 2.4 useMemo

@@ -18,11 +18,20 @@
     "build": "webpack --mode production ./src/index.js --output-path ./static/frontend/main.js",
     "eject": "react-scripts eject"
   },
+
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+
+    ],
+    "plugins": [
+      "react-hooks"
+    ],
+    "rules": {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn"
+    }
   },
   "browserslist": {
     "production": [
@@ -46,6 +55,7 @@
     "@material-ui/lab": "^4.0.0-alpha.57",
     "@material-ui/pickers": "^3.2.10",
     "axios": "^0.21.0",
+    "eslint-plugin-react-hooks": "^4.2.0",
     "react-hook-form": "^6.12.2",
     "react-router": "^5.2.0",
     "react-router-dom": "^5.2.0",

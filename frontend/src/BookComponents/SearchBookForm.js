@@ -3,8 +3,9 @@ import { useForm, Controller } from "react-hook-form";
 import { ErrorMessage } from "@hookform/error-message";
 import { TextField, Button, Grid, Box } from "@material-ui/core";
 
-const SearchBookForm = ({ onSubmit, onFilter }) => {
+const SearchBookForm = React.memo(({ onSubmit, onFilter }) => {
   const { control, handleSubmit, errors } = useForm();
+  console.log('Form.render')
 
   return (
     <React.Fragment>
@@ -73,6 +74,6 @@ const SearchBookForm = ({ onSubmit, onFilter }) => {
       </form>
     </React.Fragment>
   );
-};
+});
 
 export default SearchBookForm;

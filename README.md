@@ -12,7 +12,7 @@
 そもそも、React + DRFでの制作は割とニッチなものらしくまとまった情報もなく私自身苦労したので、もし後続の方に同じ構成で制作される方がいた場合はその際の道標に(ググる際の助けに)なれればというのと、私もこれからこの2つのスキルの練度を上げていきたいと思っているので知識を整理して、定着させるという意味でも今回この記事を書いてみようかと思います。
 私と同じようにReact + DRF + Firebaseを使って開発してみようとかそれぞれのスキルについて学んでいて詰まったところがあるけれどどう調べたらいいかわからない……といったような場合のヒントになれればという思いで書いていますが、私はまだエンジニアではなく素人なのでここに書いてあることを鵜呑みにせず、なるべくドキュメントや参考の記事のリンクを貼っていきますのでそちらを合わせてご覧になって頂けると助かります。
 
-Firebaseに関しては上記の記事では採用していませんでしたが、作ってみて認証はめんどくさい(フロント+Djnagoだとさらに)と感じたのでならばこちらに任せるほうが堅いと感じたので一緒に見ていこうとおもいます。
+Firebaseに関しては上記の記事では採用していませんでしたが、作ってみて認証はめんどくさい(フロント+Djangoだとさらに)と感じたのでならばこちらに任せるほうが堅いと感じたので一緒に見ていこうとおもいます。
 何か訂正・ご指摘等ございましたら遠慮なくおっしゃってください。
 
 
@@ -1244,7 +1244,7 @@ as属性に使いたいコンポーネントを指定する形です。
 では各コンポーネントを作っていきます。
 まずは中心部分となるAPIを叩いて、結果を描画する役割があるコンポーネントを見ていきます。
 
-<details><summary>書いたコード</summary><div>
+<details><summary>SearchBookContainer</summary><div>
 
 ```jsx
 
@@ -1358,8 +1358,13 @@ const SearchBookContainer = () => {
                       src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
                     />
                 <h3>{book.volumeInfo.title}</h3>
-                <p>{book.volumeInfo.authors[0]}</p>
-                <p>{book.volumeInfo.authors[1]}</p>
+                {/* 原作と作画で担当が分かれていたりする場合があるのでこの部分だけ再度map()を使いたい */}
+                {/* 加えてauthorsが未定義の場合もあるので、jsx内でif文を書く必要がある */}
+                {/* 結果、book.volumeInfo.authors !== undefinedの場合&&以下を返す */}
+                {book.volumeInfo.authors &&
+                  book.volumeInfo.authors.map((author, index) => (
+                    <p key={index}>{author}</p>
+                  ))}
                 <p>発売日：{book.volumeInfo.publishedDate}</p>
                 <p><a href={book.volumeInfo.infoLink}>購入ページへ</a></p>
                 <p><a href={book.volumeInfo.previewLink}>試し読み</a></p>
@@ -1537,10 +1542,10 @@ const [filterFlag, setFilterFlag] = useState(false);
 何故かというとPoint3での以下のレンダリング部分を見ていただくとわかるのですが
 
 
-```html
+```jsx
 
 <Grid container item  xs={12} spacing={1}>
-  <!-- この部分でmap()を使っている -->
+  { </* この部分でmap()を使っている */> }
   {books.map((book, index) => (
     <Grid item xs={6} md={4} align="center" key={index}>
           <img
@@ -1548,8 +1553,10 @@ const [filterFlag, setFilterFlag] = useState(false);
             src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
           />
       <h3>{book.volumeInfo.title}</h3>
-      <p>{book.volumeInfo.authors[0]}</p>
-      <p>{book.volumeInfo.authors[1]}</p>
+      {book.volumeInfo.authors &&
+        book.volumeInfo.authors.map((author, index) => (
+          <p key={index}>{author}</p>
+        ))}
       <p>発売日：{book.volumeInfo.publishedDate}</p>
       <p><a href={book.volumeInfo.infoLink}>購入ページへ</a></p>
       <p><a href={book.volumeInfo.previewLink}>試し読み</a></p>
@@ -1635,8 +1642,10 @@ const filter_items = books.filter(
                   src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
                 />
                 <h3>{book.volumeInfo.title}</h3>
-                <p>{book.volumeInfo.authors[0]}</p>
-                <p>{book.volumeInfo.authors[1]}</p>
+                {book.volumeInfo.authors &&
+                        book.volumeInfo.authors.map((author, index) => (
+                          <p key={index}>{author}</p>
+                        ))}
                 <p>発売日：{book.volumeInfo.publishedDate}</p>
                 <p><a href={book.volumeInfo.infoLink}>購入ページへ</a></p>
                 <p><a href={book.volumeInfo.previewLink}>試し読み</a></p>
@@ -1680,7 +1689,7 @@ Reactコンポーネントは必ず親要素を1つだけ用意しないとい�
 
 次はフォーム部分のコンポーネントを見ていきましょう。
 
-<details><summary>書いたコード</summary><div>
+<details><summary>SearchBookForm</summary><div>
 
 ```jsx
 
@@ -1805,6 +1814,70 @@ ReactHookFormはMaterial-UIやReact-BootStrapなどと使う場合そのまま�
 
 
 ```
+
+ドキュメントは[こちら](https://react-hook-form.com/jp/api/#Controller)
+
+#### ErrorMessageコンポーネント
+
+関連するinputのエラーメッセージを表示するためのコンポーネントです。
+今回はエラーメッセージを2種類用意したいので以下のようになりました。
+ドキュメントの例のままですね。
+
+```jsx
+
+<ErrorMessage errors={errors} name="multipleErrorInput">
+  {({ messages }) =>
+    messages &&
+    Object.entries(messages).map(([type, message]) => (
+      <p key={type}>{message}</p>
+    ))
+  }
+</ErrorMessage>
+
+
+```
+
+ドキュメントは[こちら](https://react-hook-form.com/jp/api/#ErrorMessage)
+
+### 3.5 親コンポーネントを作る
+
+Containerなページを作りたいが、そこで決め打ちしてしまうと例えばContainer-fluidなページを作りたいとかそもそもContainerじゃないページを作りたいというときに困る。
+そこでこれまでの2つのレンダリング部分をラップするようなコンポーネントを作り、そこにContainerを適用させることでページごとにContainerにするか、しないか決められるようにします。
+
+
+<details><summary>SearchBookLayout</summary><div>
+
+```jsx
+
+import React from "react";
+import { Container } from "@material-ui/core";
+
+const SearchBookLayout = (props) => {
+    return (
+        <Container>
+       {/* ここにSearchBookContainerが入っている */ }
+        {props.children}
+        </Container>
+    )
+
+}
+
+export default SearchBookLayout;
+
+
+```
+
+</div></details>
+
+すこしややこしくしてしまいましたが、最終的にコンテンツのコンポーネントとして渡すのはSearchBookContainerになります。
+SearchBookFormや今回のSearchBookLayoutはそこで読み込ませて使うためのパーツみたいなものになります。
+
+ドキュメントは[こちら](https://ja.reactjs.org/docs/composition-vs-inheritance.html)
+
+ここまでできればあとは以下のような感じで動作をすると思いますので次回からはuseCallbackなどを確認してより最適化を図っていきたいと思います。
+
+![Videotogif (2).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/9e9f28a8-6314-30dd-fa84-d255f423eb8e.gif)
+
 
 
 
