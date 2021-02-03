@@ -2,36 +2,76 @@
 import React from "react";
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-
+import { makeStyles } from '@material-ui/core/styles';
+import Color from 'color';
 import { Grid, Box } from "@material-ui/core";
 import IconButton from "@material-ui/core/IconButton";
-// import FavoriteIcon from '@material-ui/icons/Favorite';
-// import { makeStyles } from '@material-ui/core/styles';
+import FavoriteIcon from '@material-ui/icons/Favorite';
 
 import SearchBookForm from "./SearchBookForm";
 import SearchBookLayout from "./SearchBookLayout";
+import CustomCard from "../contents/CustomCard"
 import { GBAParams } from "../Utils/GoogleBooksAPIs";
 
-// スタイル
-// const useStyles = makeStyles((theme) => ({
-//   root: {
-//     maxWidth: 345,
-//   },
-//   media: {
-//     height: 0,
-//     paddingTop: '56.25%', // 16:9
-//   },
-//   expand: {
-//     transform: 'rotate(0deg)',
-//     marginLeft: 'auto',
-//     transition: theme.transitions.create('transform', {
-//       duration: theme.transitions.duration.shortest,
-//     }),
-//   },
-//   expandOpen: {
-//     transform: 'rotate(180deg)',
-//   },
-// }));
+const useStyles  = makeStyles(() => ({
+  // CardをButtonにしているのでその部分のスタイル
+  actionArea: {
+    // 幅をCardと合わせる
+    maxWidth: 300,
+    // カード間隔の調整
+    marginBottom: 40,
+    borderRadius: 16,
+    // アニメーションの速度
+    transition: '0.2s',
+    '&:hover': {
+      // hoverで大きさを拡大、boxShadowはmaxWidthを設定しているの拡大しない
+      transform: 'scale(1.1)',
+    },
+  },
+  // カード部分のスタイル
+  card: ({ color }) => ({
+    // APIから読み込んだサムネイルデータに応じてうまく調整
+    minWidth: 256,
+    maxWidth: 300,
+    maxheight: 300,
+    borderRadius: 16,
+    boxShadow: 'none',
+    '&:hover': {
+      boxShadow: `0 6px 12px 0 ${Color(color)
+        .rotate(-12)
+        .darken(0.2)
+        .fade(0.5)}`,
+    },
+  }),
+  content: ({ color }) => {
+    return {
+      backgroundColor: color,
+      // padding: '1rem 1.5rem 1.5rem',
+    };
+  },
+  title: {
+    fontFamily: 'Keania One',
+    fontSize: '1.2rem',
+    color: '#fff',
+    justifyContent: 'center',
+    overflowWrap: 'break-word',
+    textTransform: 'uppercase',
+  },
+  subtitle: {
+    fontFamily: 'Montserrat',
+    color: '#fff',
+    opacity: 0.87,
+    marginTop: '2rem',
+    fontWeight: 500,
+    fontSize: 14,
+  },
+  media: {
+    // src属性を使う(APIから取得した画像データを使う)場合はheightかpaddingTopの指定を行わないと出力されない
+    paddingTop: '110.25%',
+    objectFit: 'cover'
+  }
+}));
+
 
 const SearchBookContainer = () => {
   const [books, setBooks] = useState([]);
@@ -40,6 +80,7 @@ const SearchBookContainer = () => {
   // const classes = useStyles();
 
   const baseUrl = GBAParams.ROOT_URL;
+  const styles = useStyles({ color: '#ff9900' })
   console.log("render");
 
   const searchTitle = async (data) => {
@@ -108,14 +149,16 @@ const SearchBookContainer = () => {
     }
   };
 
+  // const saveBookTest = () => {
+
+  // }
+
+
+
+
   // console.log(books)
   // console.log(defaultBooks)
 
-  // useEffectを書く
-
-  useEffect(() => {
-    setBooks(books);
-  }, [books]);
 
   return (
     <React.Fragment>
@@ -129,16 +172,24 @@ const SearchBookContainer = () => {
         <Grid container direction="row" justify="center" alignItems="center">
           <Grid container item xs={12} spacing={1}>
             {books.map((book, index) => (
-              <Grid item xs={6} md={4} align="center" key={index}>
-                <img
+              <Grid item xs={12} sm={6} md={4}  align="center" key={index}>
+                <CustomCard classes={styles}
+                alt={`${book.volumeInfo.title} book`}
+                src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
+                title={book.volumeInfo.title}
+                authors={book.volumeInfo.authors}
+                publish={book.volumeInfo.publisher}
+                publishedDate={book.volumeInfo.publishedDate}
+                />
+                {/* <img
                   alt={`${book.volumeInfo.title} book`}
                   src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
-                />
-                <h3>{book.volumeInfo.title}</h3>
+                /> */}
+                {/* <h3>{book.volumeInfo.title}</h3> */}
                 {/* 原作と作画で担当が分かれていたりする場合があるのでこの部分だけ再度map()を使いたい */}
                 {/* 加えてauthorsが未定義の場合もあるので、jsx内でif文を書く必要がある */}
                 {/* 結果、book.volumeInfo.authors !== undefinedの場合&&以下を返す */}
-                {book.volumeInfo.authors &&
+                {/* {book.volumeInfo.authors &&
                   book.volumeInfo.authors.map((author, index) => (
                     <p key={index}>{author}</p>
                   ))}
@@ -148,11 +199,12 @@ const SearchBookContainer = () => {
                 </p>
                 <p>
                   <a href={book.volumeInfo.previewLink}>試し読み</a>
-                </p>
+                </p> */}
                 {/* いいねボタン、バックエンドと非同期しないと使えないのでダミーでおいておく */}
-                <IconButton onClick={() => console.log}>
+                {/* <IconButton onClick={() => console.log}> */}
                   {/* {like ? <FavoriteIcon color="secondary" /> : <FavoriteIcon color="disabled" /> } */}
-                </IconButton>
+                  {/* <FavoriteIcon color="secondary" /> */}
+                {/* </IconButton> */}
               </Grid>
             ))}
           </Grid>

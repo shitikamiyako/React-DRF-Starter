@@ -6,9 +6,7 @@
 
 ## 0. 今回やること
 
-レンダリングが無駄に行われてしまうとパフォーマンスが悪くなるのでなるべく避けたいのでここからは React Hooks における use~()を見ていきたいと思います。
-
-ただし、React.memo、useCallback、useMemo に関しては後述する関係上今回は使わないことにします。
+レンダリングが無駄に行われてしまうとパフォーマンスが悪くなるのでなるべく避けたいのでその手法について見ていきます。
 
 ### 1 useEffect
 
@@ -143,7 +141,7 @@ useEffect の場合はレンダリング後に指定した処理を行いたい�
 - 負荷の高い処理を伴うコンポーネントがある
 - 頻繁に再レンダリングされるコンポーネントがある
 
-この 2 つの場面でじゃあ React.memo、useCallback、useMemo ってどうなっているの？ というのをドキュメントや参考記事を見ながら見ていきたいと思います。
+この 2 つの場面でじゃあ `React.memo`、`useCallback`、`useMemo` ってどうなっているの？ というのをドキュメントや参考記事を見ながら見ていきたいと思います。
 
 ### 2.1 チューニングって何をやっているの?
 
@@ -154,12 +152,12 @@ useEffect の場合はレンダリング後に指定した処理を行いたい�
 
 ということになるようです。
 
-それぞれ React.memo がコンポーネントのメモ化、useCallback が関数のメモ化、useMemo が値のメモ化になります。
-では、[こちらの記事](https://qiita.com/soarflat/items/b9d3d17b8ab1f5dbfed2#usememo)のサンプル・コードで挙動を確認して行きたいと思います。
+それぞれ `React.memo` がコンポーネントのメモ化、`useCallback` が関数のメモ化、`useMemo` が値のメモ化になります。
+今回は[こちらの記事](https://qiita.com/soarflat/items/b9d3d17b8ab1f5dbfed2#usememo)のサンプルコードをお借りして挙動を確認して行きたいと思います。
 
 ### 2.2 React.memo
 
-まずは以下のように React.memo を使わないで書いてみます。
+まずは以下のように `React.memo` を使わないで書いてみます。
 コードの方は参考元のものをアロー関数での書き方に置き換えたものを使用させて頂きました。
 
 ```jsx
@@ -388,7 +386,9 @@ const App = () => {
 export default App;
 ```
 
-ここに GIF
+![Videotogif (3).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/adaab9a5-ddde-841d-e4ce-0b9d6faab051.gif)
+
+
 
 React.memo が使われているのに、App コンポーネントがレンダリングされるたびに子コンポーネントがレンダリングされていることが確認できると思います。
 なので、このコールバック関数をメモ化することになります。
@@ -422,7 +422,8 @@ const App = () => {
 export default App;
 ```
 
-ここに GIF
+![Videotogif (4).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/32655c62-4597-6d2c-7c22-a5a145b79ec5.gif)
+
 
 先ほどと違い、App コンポーネントが再レンダリングされても子コンポーネントの再レンダリングが起きていないことが確認できます。
 
@@ -490,7 +491,8 @@ export default App;
 
 ```
 
-ここにGIF
+![Videotogif (5).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/c3cf44d0-13e9-8d96-16d1-4b0a52457bdb.gif)
+
 
 さて、ここまでで気づいた方もいらっしゃると思いますが、その性質上`useCallback`は`React.memo`と使うことが前提であり、単独でメモ化しても意味はないようです。
 ちょっと考えれば`React.memo`で該当コンポーネントがメモ化されていないのではそれも納得です。
@@ -532,7 +534,9 @@ export default App
 
 ```
 
-ここにGIF
+![Videotogif (5).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/2b7407ea-3c17-7c1c-cf3c-daca9e3b7e87.gif)
+
+
 
 
 ```jsx
@@ -560,7 +564,8 @@ export default App
 
 ```
 
-ここにGIF
+![Videotogif (6).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/dc2dd7a1-b83e-55ac-e4ae-57f3b8d8d380.gif)
+
 
 
 それではここまでの内容を簡単にまとめると
@@ -571,4 +576,190 @@ export default App
 
 と以上のようになります。
 
-## 2.4 useMemo
+### 2.4 useMemo
+
+[ドキュメント](https://reactjs.org/docs/hooks-reference.html#usememo)
+
+`React.memo`がコンポーネント、`useCallback`が関数をメモ化するのであれば、`useMemo`は関数の実行結果や値をメモ化するものになるようです。
+転じて、`React.memo`のようにコンポーネントをメモ化するような使い方もできるみたいです。
+参考例を確認していきます。
+
+まずはuseMemoを使わないコード
+
+```jsx
+
+import React, { useState } from "react";
+
+const App = () => {
+  const [count1, setCount1] = useState(0);
+  const [count2, setCount2] = useState(0);
+
+  // 無駄なループを実行しているため計算にかなりの時間がかかる。
+  // コールバック関数なのでuseCallbackを使いたくなるが、定義したコンポーネント内では使うことができない
+  const double = count => {
+    let i = 0;
+    while (i < 1000000000) i++;
+    return count * 2;
+  };
+
+  // よってこちらの関数はレンダリングされる度に実行される
+  // しかし、このコンポーネント内ではcount1がクリックされるたびにインクリメントされるのでよってそのたびにレンダリングが起きる
+  // なのでdoubleCountに更新はないのでこちらの関数はそれに連動して実行させたくない
+  const doubledCount = double(count2);
+
+  return (
+    <>
+      <h2>Increment count1</h2>
+      <p>Counter: {count1}</p>
+      <button onClick={() => setCount1(count1 + 1)}>Increment count1</button>
+
+      <h2>Increment count2</h2>
+      <p>
+        Counter: {count2}, {doubledCount}
+      </p>
+      <button onClick={() => setCount2(count2 + 1)}>Increment count2</button>
+    </>
+  );
+}
+export default App
+
+
+```
+
+![Videotogif (7).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/9b7b47d7-8b01-eff4-cb1f-64c080ebf05e.gif)
+
+
+
+
+かなり重たい挙動になっているのがわかります。
+では、`useMemo`を使ってみましょう。
+
+```jsx
+
+
+import React, { useState,useMemo } from "react";
+
+const App = () => {
+  const [count1, setCount1] = useState(0);
+  const [count2, setCount2] = useState(0);
+
+  const double = count => {
+    let i = 0;
+    while (i < 1000000000) i++;
+    return count * 2;
+  };
+
+  // メモ化したい関数の実行結果と依存する配列を引数に指定する
+  const doubledCount = useMemo(() => double(count2), [count2]);
+
+  return (
+    <>
+      <h2>Increment count1</h2>
+      <p>Counter: {count1}</p>
+      <button onClick={() => setCount1(count1 + 1)}>Increment count1</button>
+
+      <h2>Increment count2</h2>
+      <p>
+        Counter: {count2}, {doubledCount}
+      </p>
+      <button onClick={() => setCount2(count2 + 1)}>Increment count2</button>
+    </>
+  );
+}
+export default App
+
+
+```
+
+![Videotogif (8).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/16a21e9b-50ca-763e-0981-30cec5ed3998.gif)
+
+
+Increment count2の更新は相変わらず重たいですが、Increment count1の挙動が軽くなったのがわかるかと思います。
+`useMemo`は引数にメモ化したい値を返す関数などを第1引数に指定し、第2引数にその値を出すのに必要な要素を第2引数に指定します。
+特性上、`useCallback`のように第2引数が空の場合はないです。
+値というのは単なる計算結果に留まらず、当然関数の返り値なども含まれます。
+なので、それを応用して以下のようにコンポーネントをメモ化することもできるようです。
+
+```jsx
+
+import React, { useState, useMemo } from "react";
+
+const App = () => {
+  console.log("render App");
+  const [count1, setCount1] = useState(0);
+  const [count2, setCount2] = useState(0);
+
+  // 先程までと同じ関数
+  const double = count => {
+    let i = 0;
+    while (i < 1000000000) i++;
+    return count * 2;
+  };
+
+  // Increment count2のカウンター部分を抜き出してコンポーネントにし、メモ化したい
+  // メモ化することで、Increment count1の部分が再レンダリングされてもcount2に変更がなければレンダリングされずに済む
+  // ということで以下の通りである。returnでjsx要素を返してやれば、あとはcount2の更新がない限りは再レンダリングを行わずに使い回される
+  const Counter = useMemo(() => {
+    console.log("render Counter");
+    const doubledCount = double(count2);
+
+    return (
+      <p>
+        Counter: {count2}, {doubledCount}
+      </p>
+    );
+  }, [count2]);
+
+  return (
+    <>
+      <h2>Increment count1</h2>
+      <p>Counter: {count1}</p>
+      <button onClick={() => setCount1(count1 + 1)}>Increment count1</button>
+
+      <h2>Increment count2</h2>
+      {Counter}
+      <button onClick={() => setCount2(count2 + 1)}>Increment count2</button>
+    </>
+  );
+}
+
+export default App
+
+```
+
+![Videotogif (9).gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/428779/192c4eac-8442-dd8c-ca73-8f95a8ec9f1a.gif)
+
+
+Increment count1の更新に伴って、Increment count2の再レンダリングが起きていないことが確認できると思います。
+関数コンポーネント内で`React.memo`を使うことはできないのでその代替として利用することができるということになります。
+
+## 3. まとめ
+
+では改めてまとめていきます。
+
+- `React.memo`と`useCallback`は基本的にセットで扱われる(コールバック関数がなければ後者は不要)
+- `React.memo`を使う場合時はpropsのうちどの部分が再レンダリングの比較対象になるのかわかるように書くこと(propsに依存してないコンポーネントなら別)
+- `useCallback`を使う時は当該関数を生成していないコンポーネントで関数が使用されるように書くようにして、依存する要素を想定する場合はそれが明確になるような書き方をすること
+- `useMemo`は関数や計算処理の実行結果の返り値をメモ化するものであり、応用でコンポーネントをメモ化することにも使えるので、関数コンポーネント内でのコンポーネントのメモ化に用いることができる
+- `useCallback`及び`useMemo`は依存配列を正しく指定するする必要がある(前者の場合は依存配列がない場合は空で可)
+
+感じたこととしては以下の通りです。
+
+- `React.memo`は分割されているコンポーネントに対して用いる(当然、importして使うこともあるので、依存するpropsが明確になるように設計したい)
+- `useCallback`は`useMemo`と違い、関数の再生成の抑制(useMemoの場合は値の不要な再計算の抑制になる)自体を目的とするわけでなはく、あくまで`React.memo`を利用したいがそのコンポーネントにコールバック関数が仕込まれているのでそのままでは期待している効果を得られないということへのサポーターのようなもの
+- `useMemo`は意外に便利
+
+実践でバリバリ使っていくのはまだまだ難しいなと感じました。
+というのも今回の例は主に計算処理でしたが、実際にはAPIを叩いたりする処理があるわけでそこにどれだけコストがあってチューニングが必要なのかどうなのかということを判断しないといけないからです。
+当然依存配列もAPIから受け取ったデータとなり扱いも単なるそれとは違ってくるので。
+ただ、これから隙きあらば手を出していこうと思います。
+
+次回はFirebaseに移っていくのでDBに保存する仕組みを作ってFirebaseとの連携に移って行きたいと思います。
+
+## 参考
+
+細かい参考記事は記事中に明記してあります。
+
+[React.memo / useCallback / useMemo の使い方、使い所を理解してパフォーマンス最適化をする](https://qiita.com/soarflat/items/b9d3d17b8ab1f5dbfed2)
+[React HooksのuseCallbackを正しく理解する](https://qiita.com/uehaj/items/99f7cd014e2c0fa1fc4e)
+[React hooksを基礎から理解する (useCallback編)](https://qiita.com/seira/items/8a170cc950241a8fdb23)
