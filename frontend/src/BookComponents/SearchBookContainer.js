@@ -5,15 +5,19 @@ import axios from "axios";
 import { makeStyles } from '@material-ui/core/styles';
 import Color from 'color';
 import { Grid, Box } from "@material-ui/core";
-import IconButton from "@material-ui/core/IconButton";
-import FavoriteIcon from '@material-ui/icons/Favorite';
 
 import SearchBookForm from "./SearchBookForm";
 import SearchBookLayout from "./SearchBookLayout";
 import CustomCard from "../contents/CustomCard"
 import { GBAParams } from "../Utils/GoogleBooksAPIs";
 
-const useStyles  = makeStyles(() => ({
+const useStyles  = makeStyles((theme) => ({
+  popover: {
+    pointerEvents: "none",
+  },
+  paper: {
+    padding: theme.spacing(1),
+  },
   // CardをButtonにしているのでその部分のスタイル
   actionArea: {
     // 幅をCardと合わせる
@@ -98,11 +102,6 @@ const SearchBookContainer = () => {
     try {
       const response = await axios.get(baseUrl, { params: params });
       console.log(response.data.items);
-      // 期間限定試し読みなどを省く
-      // const filter_items = response.data.items.filter(
-      //   (book) => book.volumeInfo.seriesInfo !== undefined
-      // )
-      // console.log(filter_items)
       const filter_items = response.data.items;
       // 刊行順にソート
       const filtered_items = filter_items.sort(function (a, b) {
@@ -149,9 +148,14 @@ const SearchBookContainer = () => {
     }
   };
 
-  // const saveBookTest = () => {
+  const handleClick = (e) => {
+    e.preventDefault();
+  };
 
-  // }
+  const saveBookTest = (data) => {
+    console.log(data)
+
+  }
 
 
 
@@ -180,6 +184,9 @@ const SearchBookContainer = () => {
                 authors={book.volumeInfo.authors}
                 publish={book.volumeInfo.publisher}
                 publishedDate={book.volumeInfo.publishedDate}
+                infoLink={book.volumeInfo.infoLink}
+                previewLink={book.volumeInfo.previewLink}
+                Data={book.volumeInfo}
                 />
                 {/* <img
                   alt={`${book.volumeInfo.title} book`}

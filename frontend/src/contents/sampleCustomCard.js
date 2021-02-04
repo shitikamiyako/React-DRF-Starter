@@ -63,7 +63,7 @@ const useStyles = makeStyles(() => ({
 const CustomCard = ({ classes, image, title, subtitle }) => {
     const mediaStyles = useFourThreeCardMediaStyles();
     return (
-        <CardActionArea className={classes.actionArea}>
+        <CardActionArea className={classes.actionArea} onClick={() => {console.log('test')}}>
             <Card className={classes.card}>
                 <CardMedia classes={mediaStyles} image={image} />
                 <CardContent className={classes.content}>
