@@ -1,6 +1,6 @@
 // 統括部分。Formの実行結果のレンダリング部分とフォームの処理部分をここに定義
 import React from "react";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import axios from "axios";
 import { makeStyles } from '@material-ui/core/styles';
 import Color from 'color';
@@ -148,14 +148,14 @@ const SearchBookContainer = () => {
     }
   };
 
-  const handleClick = (e) => {
-    e.preventDefault();
-  };
+  // const handleClick = (e) => {
+  //   e.preventDefault();
+  // };
 
-  const saveBookTest = (data) => {
-    console.log(data)
+  // const saveBookTest = (data) => {
+  //   console.log(data)
 
-  }
+  // }
 
 
 
@@ -180,13 +180,8 @@ const SearchBookContainer = () => {
                 <CustomCard classes={styles}
                 alt={`${book.volumeInfo.title} book`}
                 src={`http://books.google.com/books/content?id=${book.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`}
-                title={book.volumeInfo.title}
-                authors={book.volumeInfo.authors}
-                publish={book.volumeInfo.publisher}
-                publishedDate={book.volumeInfo.publishedDate}
-                infoLink={book.volumeInfo.infoLink}
-                previewLink={book.volumeInfo.previewLink}
                 Data={book.volumeInfo}
+                index={index}
                 />
                 {/* <img
                   alt={`${book.volumeInfo.title} book`}

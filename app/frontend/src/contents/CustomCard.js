@@ -1,9 +1,10 @@
 import React from "react";
-import { useState, useEffect } from "react";
-import GoogleFont from "react-google-font-loader";
-import { makeStyles } from "@material-ui/core/styles";
-
-
+import { useState } from "react";
+// import GoogleFont from "react-google-font-loader";
+// import { makeStyles } from "@material-ui/core/styles";
+import firebase from "firebase/app";
+import config from '../config';
+import "firebase/firestore";
 import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
 import MenuBookIcon from "@material-ui/icons/MenuBook";
 import InfoIcon from '@material-ui/icons/Info';
@@ -19,31 +20,38 @@ import {
   Link,
   IconButton,
   Menu,
-  MenuItem
+  // MenuItem
 } from "@material-ui/core";
 
 // import Menu from 'material-ui-popup-state/HoverMenu'
 // import Popover from 'material-ui-popup-state/HoverPopover'
 import PopupState, { bindTrigger, bindMenu } from 'material-ui-popup-state';
 
+if (!firebase.apps.length) {
+  firebase.initializeApp(config);
+}
+
+const db = firebase.firestore();
+
 const CustomCard = ({
   classes,
   alt,
   src,
-  title,
-  authors,
-  publish,
-  publishedDate,
-  infoLink,
-  previewLink,
+  // title,
+  // authors,
+  // publish,
+  // publishedDate,
+  // infoLink,
+  // previewLink,
   Data,
+  index
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [item, setItem] = useState({});
 
-  const handleClick = (e) => {
-    e.preventDefault();
-  };
+  // const handleClick = (e) => {
+  //   e.preventDefault();
+  // };
 
   const handlePopoverOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -54,7 +62,7 @@ const CustomCard = ({
   };
 
   // DBと通信するための関数。とりあえず仮置
-  const saveBookTest = () => {
+  const saveBookTest = async() => {
     // 本当はStateに格納してそれでどうこうしたいけど遅延の関係でうまく行かない
     // なのでとりあえず引数で渡されたデータをそのまま使う、あとでチューニングするならする。
     const params = {
@@ -66,9 +74,15 @@ const CustomCard = ({
       infoLink: Data.infoLink,
       previewLink: Data.previewLink,
     };
-    setItem(Data)
     console.log(params);
-  };
+
+    try {
+      const response = await db.collection("mylibrary").doc("Book-" + String(index)).set(params)
+      console.log("success!")
+    } catch(error) {
+      console.log(error)
+    }
+  }
 
   const open = Boolean(anchorEl);
 
