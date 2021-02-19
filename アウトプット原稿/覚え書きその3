@@ -1,0 +1,44 @@
+# Firebase導入の前に
+
+```jsx
+
+// ex. 1. 基本形
+nextBatch = restaurantRef
+    // whereFieldで絞り込みをかけていく
+    // cityフィールドがTokyo
+    .whereField("city", isEqualTo:"Tokyo")
+    // categoryフィールドがtempura
+    .whereField("category", isEqualTo:"tempura")
+    // ratingフィールドを降順に
+    .order(by: "rating", descending: true)
+    // 上位20件取得
+    .limit(to: 20)
+
+// ex. 2. FireStoreの考え方の基本
+
+nextBatch = restaurantRef
+    .whereField("city", isEqualTo:"Tokyo")
+    .whereField("category", isEqualTo:"tempura")
+    .order(by: "rating"m descending: true)
+    .limit(to: 20)
+    // どの位置から取得を始めるのか具体的に指示する
+    .start(after: ["Tokyo", "tempura", 4.9])
+
+// ex. 3. 2を短くする
+
+// 大本のクエリ
+nextBatch = restaurantRef
+    .whereField("city", isEqualTo:"Tokyo")
+    .whereField("category", isEqualTo:"tempura")
+    .order(by: "rating"m descending: true)
+    .limit(to: 20)
+
+// 次の20件を取得したいクエリ
+nextQuery = nextBatch.start(after: ["Tokyo", "tempura", 4.9])
+
+// ex. 4. 2や3では取得漏れやエラーになるので改善
+// 直前のクエリで取得したドキュメントを判断するように指定する
+nextQuery = nextBatch.start(after: previousDoc)
+
+
+```
