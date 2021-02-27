@@ -1,5 +1,5 @@
-from REST_framework import status
-from REST_framework.exceptions import APIExeptions
+from rest_framework import status
+from rest_framework.exceptions import APIExeptions
 
 class NoAuthToken(APIExeptions):
     status_code = status.HTTP_401_UNAUTHORIZED

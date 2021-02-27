@@ -8,6 +8,9 @@ verify_ssl = true
 [packages]
 django = "*"
 djangorestframework = "*"
+django-environ = "*"
+firebase-admin = "*"
+django-cors-headers = "*"
 
 [scripts]
 start = "python manage.py runserver"
