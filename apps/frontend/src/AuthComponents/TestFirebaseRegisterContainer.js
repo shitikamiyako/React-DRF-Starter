@@ -4,8 +4,9 @@ import { Card, CardContent, Box } from '@material-ui/core';
 import axios from "axios"
 import firebase from '../Utils/Firebase'
 import TestFirebaseAuthLayout from './TestFirebaseAuthLayout'
-import TestFirebaseAuthForm from './TestFirebaseAuthForm'
+import TestFirebaseRegisterForm from './TestFirebaseRegisterForm'
 import { makeStyles } from '@material-ui/core/styles';
+
 
 const useStyles = makeStyles((theme) => ({
     contents: {
@@ -31,36 +32,6 @@ const useStyles = makeStyles((theme) => ({
 // 本使用のときは他のコンテンツとともにContens.jsで管理
 const TestFirebaseAuthContainer = () => {
     const classes= useStyles();
-    let responseJson = []
-    const onTwiiterLogin = () => {
-        const provider = new firebase.auth.TwitterAuthProvider();
-        firebase
-            .auth()
-            .signInWithPopup(provider)
-            .then(res=> {
-                console.log(res);
-                firebase
-                    .auth()
-                    .currentUser
-                    .getIdToken(/* forceRefresh */ true)
-                    .then( (idToken) => {
-                        console.log(idToken)
-                        axios.defaults.headers.common['Authorization'] = idToken;
-                        try {
-                            const response = axios.get("http://127.0.0.1:8000/users/api/")
-                            console.log(response)
-                        } catch (error) {
-                            console.log(error)
-                        }
-
-                    }).catch(function (error) {
-                        console.log(error);
-                    });
-            })
-            .catch(err => {
-                console.log(err);
-            })
-    }
 
     return(
         <React.Fragment>
@@ -68,7 +39,7 @@ const TestFirebaseAuthContainer = () => {
                 <TestFirebaseAuthLayout>
                     {/* <Card>
                         <CardContent> */}
-                            <TestFirebaseAuthForm onSubmit={console.log}  TwitterAuth={onTwiiterLogin} />
+                            <TestFirebaseRegisterForm/>
                         {/* </CardContent>
                     </Card> */}
                 </TestFirebaseAuthLayout>

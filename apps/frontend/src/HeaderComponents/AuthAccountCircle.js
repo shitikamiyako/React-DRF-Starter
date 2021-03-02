@@ -1,13 +1,22 @@
 import React from "react";
+import { useState } from "react";
 import IconButton from "@material-ui/core/IconButton";
 import AccountCircle from "@material-ui/icons/AccountCircle";
 import MenuItem from "@material-ui/core/MenuItem";
 import Menu from "@material-ui/core/Menu";
 import { Link } from "react-router-dom";
 
-const AuthAccountCircle = (handleMenu, anchorEl, handleClose) => {
-    const open = Boolean(anchorEl);
+const AuthAccountCircle = () => {
+    const [anchorEl, setAnchorEl] = useState(null);
 
+    const handleMenu = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+    const open = Boolean(anchorEl);
     return (
         <React.Fragment>
             <div>
@@ -35,8 +44,8 @@ const AuthAccountCircle = (handleMenu, anchorEl, handleClose) => {
                     open={open}
                     onClose={handleClose}
                 >
-                    <MenuItem component={Link} to="/" onClick={handleClose}>Profile</MenuItem>
-                    <MenuItem component={Link} to="/" onClick={handleClose}>Logout</MenuItem>
+                    <MenuItem component={Link} to="/Profile" onClick={handleClose}>Profile</MenuItem>
+                    <MenuItem component={Link} to="/Logout" onClick={handleClose}>Logout</MenuItem>
                 </Menu>
             </div>
         </React.Fragment>

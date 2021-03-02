@@ -131,7 +131,7 @@ export default function MenuAppBar() {
                 open={open}
                 onClose={handleClose}
               >
-                {/* component={Link}にしてReact-rooter-domのLinkを使うようにする */}
+                {/* component={Link}にしてReact-router-domのLinkを使うようにする */}
                 <MenuItem onClick={handleClose}>Profile</MenuItem>
                 <MenuItem onClick={handleClose}>My account</MenuItem>
               </Menu>

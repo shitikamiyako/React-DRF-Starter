@@ -1,0 +1,6 @@
+# Firebaseを導入してReactをBuildし、Django側とリンクさせてみる
+
+## 今回やること
+
+フロント側でFirebaseAuthenticationを導入し、Reactをbuildし、Djangoに読み込ませ、とりあえずRequestにトークンを載せて送信してみる
+

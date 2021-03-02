@@ -14,7 +14,7 @@ const DrawerList = (Styles) => {
         <React.Fragment>
             <div className={classes.list}>
                 <List>
-                    <ListItem button component={Link} to="/">
+                    <ListItem button component={Link} to="/Home">
                         <ListItemText primary="Home" />
                     </ListItem>
                     <ListItem button component={Link} to="/">
@@ -23,7 +23,7 @@ const DrawerList = (Styles) => {
                     <ListItem button component={Link} to="/">
                         <ListItemText primary="Sample" />
                     </ListItem>
-                    <ListItem button component={Link} to="/">
+                    <ListItem button component={Link} to="/Search_Book">
                         <ListItemText primary="Search" />
                     </ListItem>
                 </List>

@@ -16,6 +16,8 @@ import {
 import MenuIcon from "@material-ui/icons/Menu";
 import AccountCircle from "@material-ui/icons/AccountCircle";
 import DrawerList from "./DrawerList";
+import AuthAccountCircle from "./AuthAccountCircle";
+import NoAuthAccountCircle from "./AuthAccountCircle";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -54,13 +56,6 @@ const MenuAppBar = () => {
     setAuth(event.target.checked);
   };
 
-  const handleMenu = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
 
   return (
     <React.Fragment>
@@ -99,68 +94,10 @@ const MenuAppBar = () => {
               Sample App
             </Typography>
             {!auth && (
-              <div>
-                <IconButton
-                  aria-label="account of current user"
-                  aria-controls="menu-appbar"
-                  aria-haspopup="true"
-                  onClick={handleMenu}
-                  color="inherit"
-                >
-                  <AccountCircle />
-                </IconButton>
-                <Menu
-                  id="menu-appbar"
-                  anchorEl={anchorEl}
-                  anchorOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
-                  keepMounted
-                  transformOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
-                  open={open1}
-                  onClose={handleClose}
-                >
-                  <MenuItem onClick={handleClose}>Login</MenuItem>
-                  <MenuItem onClick={handleClose}>Register</MenuItem>
-                </Menu>
-              </div>
+              <NoAuthAccountCircle />
             )}
             {auth && (
-              <div>
-                <IconButton
-                  aria-label="account of current user"
-                  aria-controls="menu-appbar"
-                  aria-haspopup="true"
-                  onClick={handleMenu}
-                  color="inherit"
-                >
-                  <AccountCircle />
-                </IconButton>
-                <Menu
-                  id="menu-appbar"
-                  anchorEl={anchorEl}
-                  anchorOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
-                  keepMounted
-                  transformOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
-                  open={open1}
-                  onClose={handleClose}
-                >
-                  {/* component={Link}にしてReact-rooter-domのLinkを使うようにする */}
-                  <MenuItem onClick={handleClose}>Profile</MenuItem>
-                  <MenuItem onClick={handleClose}>My account</MenuItem>
-                  <MenuItem onClick={handleClose}>Logout</MenuItem>
-                </Menu>
-              </div>
+              <AuthAccountCircle  />
             )}
           </Toolbar>
         </AppBar>

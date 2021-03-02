@@ -9,9 +9,9 @@ from django.utils import timezone
 from rest_framework import authentication
 from rest_framework import exceptions
 
-from .excepts.firebase_auth_exceptions import FirebaseError
-from .excepts.firebase_auth_exceptions import InvalidAuthToken
-from .excepts.firebase_auth_exceptions import NoAuthToken
+from ..excepts.firebase_auth_exceptions import FirebaseError
+from ..excepts.firebase_auth_exceptions import InvalidAuthToken
+from ..excepts.firebase_auth_exceptions import NoAuthToken
 
 env = environ.Env(DEBUG=(bool, False))
 DEBUG = env('DEBUG')
