@@ -53,7 +53,8 @@ INSTALLED_APPS = [
     # 3rdparty
     'corsheaders',
     'rest_framework',
-    'firebase_admin'
+    'firebase_admin',
+    # 'drf_firebase_auth',
 ]
 
 MIDDLEWARE = [
@@ -120,8 +121,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.SessionAuthentication',
         'apps.authentication.funcs.firebase_authentication.FirebaseAuthentication',
+        # 'drf_firebase_auth.authentication.FirebaseAuthentication',
     ),
 }
+
+# drf_firebase_auth settigns
+
+
 
 
 # Internationalization

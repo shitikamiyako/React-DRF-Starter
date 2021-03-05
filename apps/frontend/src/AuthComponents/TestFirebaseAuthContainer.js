@@ -47,7 +47,7 @@ const TestFirebaseAuthContainer = () => {
                         console.log(idToken)
                         axios.defaults.headers.common['Authorization'] = idToken;
                         try {
-                            const response = axios.get("http://127.0.0.1:8000/users/api/")
+                            const response = axios.get("http://127.0.0.1:8000/users/whoami/")
                             console.log(response)
                         } catch (error) {
                             console.log(error)

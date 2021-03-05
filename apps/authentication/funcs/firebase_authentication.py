@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import authentication
 from rest_framework import exceptions
+import json
 
 from ..excepts.firebase_auth_exceptions import FirebaseError
 from ..excepts.firebase_auth_exceptions import InvalidAuthToken
@@ -15,7 +16,7 @@ from ..excepts.firebase_auth_exceptions import NoAuthToken
 
 env = environ.Env(DEBUG=(bool, False))
 DEBUG = env('DEBUG')
-User = get_user_model
+User = get_user_model()
 
 # Django-environで管理するようにする
 cred = credentials.Certificate({
@@ -43,7 +44,10 @@ class FirebaseAuthentication(authentication.BaseAuthentication):
         id_token = auth_header.split(" ").pop()
         decoded_token = None
         try:
-            decoded_token = auth.verify_id_token(id_token)
+            # トークンの有効期限が切れているかどうかも含めて検証する
+            decoded_token = auth.verify_id_token(id_token, check_revoked=True)
+        except auth.RevokedIdTokenError:
+            raise FirebaseError("Your auth token expired")
         except Exception:
             raise InvalidAuthToken("Invalid auth token")
 
@@ -51,9 +55,21 @@ class FirebaseAuthentication(authentication.BaseAuthentication):
             return None
 
         try:
-            uid = decoded_token.get("uid")
+            uid = decoded_token['uid']
+            fetch_user = auth.get_user(uid)
+            # print(type(fetch_user))
+            dict_userData = vars(fetch_user)
+            test = dict_userData['_data']['providerUserInfo']
+            print(test)
+            provider = [d.get('providerId') for d in test if d.get('providerId')]
+            print(str(provider[0]))
+            provider = str(provider[0])
+            screenName = [d.get('screenName')for d in test if d.get('screenName')]
+            print(str(screenName[0]))
+            screenName = str(screenName[0])
+            user = User.objects.get_or_create(username=screenName, social_auth=provider, uid=uid)
+            # user.profile.last_activity = timezone.localtime()
         except Exception:
             raise FirebaseError()
+        return user
 
-        user, created = User.objects.get_or_create(username=uid,uid=uid)
-        user.profile.last_activity = timezone.localtime()

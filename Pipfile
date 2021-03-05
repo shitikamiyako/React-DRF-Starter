@@ -14,6 +14,7 @@ firebase-admin = "*"
 django-cors-headers = "*"
 python-dotenv = "*"
 autopep8 = "*"
+drf-firebase-auth = "*"
 
 [scripts]
 start = "python manage.py runserver"

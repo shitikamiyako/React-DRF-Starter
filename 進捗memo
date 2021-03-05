@@ -103,3 +103,7 @@ const response  = await axios.get(URL,{
             'Authorization': idToken
         }
     })
+
+ログインボタン発火→FirebaseAuthentication→idTokenをリクエストヘッダにつけてWhoAmIViewにGETして返ってくるかどうか
+
+→返ってきたらそれを確認してログイン後の画面にフロント側でリダイレクトさせればいい。
